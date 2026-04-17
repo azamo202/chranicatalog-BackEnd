@@ -3,7 +3,11 @@
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\BrandController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\MaintenanceCenterController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\SupportDownloadController;
+use App\Http\Controllers\Admin\SupportVideoController;
 use App\Http\Middleware\CheckSuperAdmin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -28,13 +32,15 @@ Route::get('/products/{id}/{slug?}', [ProductController::class, 'show']);
 Route::get('/brands', [BrandController::class, 'index']);
 Route::get('/brands/{id}', [BrandController::class, 'show']);
 
-
+Route::get('/maintenance-centers', [MaintenanceCenterController::class, 'index']);
+Route::get('/support-videos', [SupportVideoController::class, 'index']);
+Route::get('/support-downloads', [SupportDownloadController::class, 'index']);
 
 // المسارات المحمية (تتطلب وجود Token صالح)
 Route::middleware('auth:sanctum')->group(function () {
     // مسار إنشاء مدير جديد (محمي بصلاحية Super Admin فقط)
     Route::post('/admin/users', [AdminController::class, 'store'])
-         ->middleware(CheckSuperAdmin::class);
+        ->middleware(CheckSuperAdmin::class);
     Route::get('/admin/profile', [AdminController::class, 'profile']);
     Route::post('/admin/logout', [AdminController::class, 'logout']);
     // مسارات إدارة الأقسام (إضافة، تعديل، حذف)
@@ -52,6 +58,19 @@ Route::middleware('auth:sanctum')->group(function () {
     // مسارات إدارة العلامات التجارية
     Route::post('/brands', [BrandController::class, 'store']);
     // تذكر: عند التعديل ورفع صورة من الواجهة نستخدم POST مع _method=PUT
-    Route::post('/brands/{id}', [BrandController::class, 'update']); 
+    Route::post('/brands/{id}', [BrandController::class, 'update']);
     Route::delete('/brands/{id}', [BrandController::class, 'destroy']);
+    Route::post('/maintenance-centers', [MaintenanceCenterController::class, 'store']);
+    Route::post('/maintenance-centers/{id}', [MaintenanceCenterController::class, 'update']);
+    Route::delete('/maintenance-centers/{id}', [MaintenanceCenterController::class, 'destroy']);
+
+    Route::post('/support-videos', [SupportVideoController::class, 'store']);
+    Route::post('/support-videos', [SupportVideoController::class, 'store']);
+    Route::post('/support-videos/{id}', [SupportVideoController::class, 'update']);
+    Route::delete('/support-videos/{id}', [SupportVideoController::class, 'destroy']);
+
+    Route::post('/support-downloads', [SupportDownloadController::class, 'store']);
+    Route::put('/support-downloads/{id}', [SupportDownloadController::class, 'update']);
+    Route::delete('/support-downloads/{id}', [SupportDownloadController::class, 'destroy']);
+    Route::get('/admin/dashboard-stats', [DashboardController::class, 'index']);
 });

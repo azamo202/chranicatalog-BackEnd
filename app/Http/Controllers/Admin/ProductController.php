@@ -12,29 +12,66 @@ use Illuminate\Support\Facades\DB;
 class ProductController extends Controller
 {
     /**
-     * عرض قائمة المنتجات للواجهة (مع فلترة بسيطة)
+     * عرض قائمة المنتجات للواجهة (مع فلترة متقدمة وبحث)
      */
     public function index(Request $request)
     {
-        // استعلام أساسي يجلب المنتجات الفعالة فقط مع صورتها الرئيسية والقسم
-        $query = Product::where('is_active', true)
+        // 1. الاستعلام الأساسي
+        $query = Product::query()
             ->with(['category', 'brand', 'images' => function ($q) {
-                $q->where('is_primary', true); // جلب الصورة الرئيسية فقط للقائمة
+                $q->where('is_primary', true);
             }]);
 
-        // فلترة المنتجات حسب القسم من الـ URL (مثال: ?category_slug=ovens)
-        if ($request->has('category_slug')) {
+        // 2. الفلترة حسب القسم (عن طريق الـ Slug لأنه يأتي من الرابط عادة)
+        if ($request->filled('category_slug')) {
             $query->whereHas('category', function ($q) use ($request) {
                 $q->where('slug', $request->category_slug);
             });
         }
 
-        // استخدام Pagination (مثلاً 12 منتج في كل صفحة)
-        $products = $query->latest()->paginate(12);
+        // 3. الفلترة حسب الماركة (Brand)
+        if ($request->filled('brand_id')) {
+            $query->where('brand_id', $request->brand_id);
+        }
+
+        // 4. الفلترة حسب السعر (أقل سعر وأعلى سعر)
+        if ($request->filled('min_price')) {
+            $query->where('price', '>=', $request->min_price);
+        }
+        if ($request->filled('max_price')) {
+            $query->where('price', '<=', $request->max_price);
+        }
+
+        // 5. البحث النصي المتقدم (في الاسم باللغات الثلاث)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                // البحث داخل حقول الـ JSON للغات
+                $q->where('name->ar', 'LIKE', "%{$search}%")
+                    ->orWhere('name->en', 'LIKE', "%{$search}%")
+                    ->orWhere('name->ku', 'LIKE', "%{$search}%")
+                    ->orWhere('model_number', 'LIKE', "%{$search}%"); // البحث برقم الموديل أيضاً!
+            });
+        }
+
+        // 6. الترتيب (الأحدث، أو الأرخص، أو الأغلى)
+        if ($request->filled('sort')) {
+            if ($request->sort === 'price_asc') {
+                $query->orderBy('price', 'asc');
+            } elseif ($request->sort === 'price_desc') {
+                $query->orderBy('price', 'desc');
+            } else {
+                $query->latest(); // الافتراضي
+            }
+        } else {
+            $query->latest();
+        }
+
+        // 7. جلب البيانات مع التقسيم (Pagination)
+        $products = $query->paginate(12);
 
         return ProductResource::collection($products);
     }
-
     /**
      * عرض تفاصيل منتج واحد (لصفحة المنتج في Next.js)
      */

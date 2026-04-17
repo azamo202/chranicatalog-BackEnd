@@ -11,16 +11,17 @@ class ProductResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
+            'name' => $this->getTranslations('name'),
             'slug' => $this->slug,
             'model_number' => $this->model_number,
             'origin_country' => $this->origin_country,
-            'description' => $this->description,
+            'description' => $this->getTranslations('description'),
+            'price' => $this->price,
             'is_active' => (bool) $this->is_active,
-            
+
             // جلب القسم والعلامة التجارية (إذا تم تحميلهما Eager Loading)
             'category' => new CategoryResource($this->whenLoaded('category')),
-            'brand' => $this->whenLoaded('brand', function() {
+            'brand' => $this->whenLoaded('brand', function () {
                 return [
                     'id' => $this->brand->id,
                     'name' => $this->brand->name,
@@ -29,8 +30,8 @@ class ProductResource extends JsonResource
             }),
 
             // جلب الصور (مع إضافة الرابط الكامل للسيرفر)
-            'images' => $this->whenLoaded('images', function() {
-                return $this->images->map(function($img) {
+            'images' => $this->whenLoaded('images', function () {
+                return $this->images->map(function ($img) {
                     return [
                         'id' => $img->id,
                         'url' => asset('storage/' . $img->image_path),
@@ -40,7 +41,7 @@ class ProductResource extends JsonResource
             }),
 
             // جلب المواصفات الفنية وتجميعها بناءً على (group_name)
-            'specifications' => $this->whenLoaded('specifications', function() {
+            'specifications' => $this->whenLoaded('specifications', function () {
                 return $this->specifications->groupBy('group_name')->map(function ($specs) {
                     return $specs->map(function ($spec) {
                         return [
@@ -52,15 +53,15 @@ class ProductResource extends JsonResource
             }),
 
             // جلب المميزات مرتبة
-            'features' => $this->whenLoaded('features', function() {
-                return $this->features->sortBy('sort_order')->values()->map(function($feat) {
+            'features' => $this->whenLoaded('features', function () {
+                return $this->features->sortBy('sort_order')->values()->map(function ($feat) {
                     return $feat->feature_text;
                 });
             }),
 
             // جلب خصائص الفلترة (مثل: اللون، السعة)
-            'attributes' => $this->whenLoaded('attributeValues', function() {
-                return $this->attributeValues->map(function($attrVal) {
+            'attributes' => $this->whenLoaded('attributeValues', function () {
+                return $this->attributeValues->map(function ($attrVal) {
                     return [
                         'type' => $attrVal->attribute->name,
                         'value' => $attrVal->value

@@ -11,13 +11,12 @@ class CategoryResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
+            // الدالة بالجمع (getTranslations) سترجع مصفوفة بجميع اللغات ['ar' => '...', 'en' => '...', 'ku' => '...']
+            'name' => $this->getTranslations('name'),
             'slug' => $this->slug,
-            // التأكد من إرجاع الرابط الكامل للصورة إذا كانت موجودة
             'image' => $this->image ? asset('storage/' . $this->image) : null,
             'is_active' => (bool) $this->is_active,
             'parent_id' => $this->parent_id,
-            // استدعاء الأقسام الفرعية إذا تم طلبها (Eager Loading)
             'children' => CategoryResource::collection($this->whenLoaded('children')),
         ];
     }
