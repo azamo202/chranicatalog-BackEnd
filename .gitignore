@@ -1,24 +1,52 @@
+# Logs
+logs
 *.log
-.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment
 .env
 .env.backup
 .env.production
+*.local
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDEs and Editors
+.vscode/*
+!.vscode/extensions.json
+.idea
+.fleet
+.nova
+.zed
 .phpactor.json
+
+# Laravel
 .phpunit.result.cache
-/.fleet
-/.idea
-/.nova
-/.phpunit.cache
-/.vscode
-/.zed
-/auth.json
-/node_modules
+.phpunit.cache
 /public/build
 /public/hot
 /public/storage
 /storage/*.key
 /storage/pail
 /vendor
+/auth.json
 Homestead.json
 Homestead.yaml
-Thumbs.db
+
+# Node / Frontend
+/node_modules
+dist
+dist-ssr
+
+# Visual Studio
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
