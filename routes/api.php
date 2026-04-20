@@ -8,6 +8,10 @@ use App\Http\Controllers\Admin\MaintenanceCenterController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\SupportDownloadController;
 use App\Http\Controllers\Admin\SupportVideoController;
+use App\Http\Controllers\Api\Site\SiteBrandController;
+use App\Http\Controllers\Api\Site\SiteCategoryController;
+use App\Http\Controllers\Api\Site\SiteProductController;
+use App\Http\Controllers\Api\Site\SiteSupportController;
 use App\Http\Middleware\CheckSuperAdmin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +19,37 @@ use Illuminate\Support\Facades\Route;
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+
+
+// =========================================================
+// مسارات الموقع العام (Frontend Website) - للزوار بدون تسجيل دخول
+// =========================================================
+Route::prefix('site')->group(function () {
+
+    // مسارات المنتجات الخاصة بالكتالوج
+    Route::get('/products', [SiteProductController::class, 'index']);
+    Route::get('/products/{id}/{slug?}', [SiteProductController::class, 'show']);
+
+    // مسارات الأقسام
+    Route::get('/categories', [SiteCategoryController::class, 'index']);
+    Route::get('/categories/{slug}', [SiteCategoryController::class, 'show']);
+
+    // مسارات الماركات
+    Route::get('/brands', [SiteBrandController::class, 'index']);
+
+    Route::get('/maintenance-centers', [SiteSupportController::class, 'maintenanceCenters']);
+    Route::get('/videos', [SiteSupportController::class, 'videos']);
+    Route::get('/downloads', [SiteSupportController::class, 'downloads']);
+});
+
+
+
+
+
+
+
+
+
 
 
 // ---------------------------------------------------------

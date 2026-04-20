@@ -68,8 +68,7 @@ class ProductController extends Controller
         }
 
         // 7. جلب البيانات مع التقسيم (Pagination)
-        $products = $query->paginate(12);
-
+        $products = $query->get();
         return ProductResource::collection($products);
     }
     /**
@@ -79,7 +78,6 @@ class ProductController extends Controller
     {
         // نبحث بالـ ID لأنه الأسرع (Primary Key)
         $product = Product::where('id', $id)
-            ->where('is_active', true)
             ->with(['category', 'brand', 'images', 'specifications', 'features', 'attributeValues.attribute'])
             ->firstOrFail();
 
