@@ -9,6 +9,7 @@ use App\Models\Brand;
 use App\Models\MaintenanceCenter;
 use App\Models\SupportVideo;
 use App\Models\SupportDownload;
+use Carbon\Carbon; // تأكد من استدعاء Carbon
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -18,12 +19,40 @@ class DashboardController extends Controller
      */
     public function index()
     {
-        // جمع الأرقام من كافة الجداول
+        // 1. تجهيز بيانات الرسم البياني الدائري (توزيع الأقسام)
+        $categoryDistribution = Category::withCount('products')
+            ->having('products_count', '>', 0) // جلب الأقسام التي تحتوي على منتجات فقط
+            ->get()
+            ->map(function ($category) {
+                return [
+                    'name' => $category->name, 
+                    'value' => $category->products_count,
+                ];
+            });
+
+        // 2. تجهيز بيانات الرسم البياني الشريطي (المنتجات المضافة في آخر 6 أشهر)
+        $monthlyData = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $date = Carbon::now()->subMonths($i);
+            $monthlyData[] = [
+                'month' => $date->format('M'), // (Jan, Feb, Mar...)
+                'products' => Product::whereMonth('created_at', $date->month)
+                                     ->whereYear('created_at', $date->year)
+                                     ->count()
+            ];
+        }
+
+        // جمع الأرقام من كافة الجداول (تم تعديل المفاتيح لتطابق الفرونت اند)
         $stats = [
-            'products_count' => Product::count(),
-            'active_products' => Product::where('is_active', true)->count(),
-            'categories_count' => Category::count(),
-            'brands_count' => Brand::count(),
+            'totalProducts' => Product::count(),
+            'totalCategories' => Category::count(),
+            'totalBrands' => Brand::count(),
+            'hiddenProducts' => Product::where('is_active', false)->count(), // تم التعديل لتناسب (المنتجات المخفية)
+            
+            // بيانات الرسوم البيانية الجديدة
+            'monthlyData' => $monthlyData,
+            'categoryDistribution' => $categoryDistribution,
+
             'support' => [
                 'maintenance_centers' => MaintenanceCenter::count(),
                 'videos' => SupportVideo::count(),
