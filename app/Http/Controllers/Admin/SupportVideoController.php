@@ -9,9 +9,23 @@ use Illuminate\Http\Request;
 
 class SupportVideoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return SupportVideoResource::collection(SupportVideo::all());
+        // 1. بدء الاستعلام
+        $query = SupportVideo::query();
+
+        // 2. الفلترة (البحث في عنوان الفيديو بجميع اللغات)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('title->ar', 'LIKE', "%{$search}%")
+                  ->orWhere('title->en', 'LIKE', "%{$search}%")
+                  ->orWhere('title->ku', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // 3. جلب البيانات
+        return SupportVideoResource::collection($query->get());
     }
 
     public function store(Request $request)

@@ -9,9 +9,32 @@ use Illuminate\Http\Request;
 
 class MaintenanceCenterController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return MaintenanceCenterResource::collection(MaintenanceCenter::all());
+        // 1. بدء الاستعلام
+        $query = MaintenanceCenter::query();
+
+        // 2. الفلترة العامة (البحث الشامل في الاسم، العنوان بجميع اللغات، أو رقم الهاتف)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name->ar', 'LIKE', "%{$search}%")
+                  ->orWhere('name->en', 'LIKE', "%{$search}%")
+                  ->orWhere('name->ku', 'LIKE', "%{$search}%")
+                  ->orWhere('phone', 'LIKE', "%{$search}%")
+                  ->orWhere('address->ar', 'LIKE', "%{$search}%")
+                  ->orWhere('address->en', 'LIKE', "%{$search}%")
+                  ->orWhere('address->ku', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // 3. الفلترة المخصصة (مثال: إذا أردت جلب مراكز برقم هاتف محدد فقط)
+        if ($request->filled('phone')) {
+            $query->where('phone', $request->phone);
+        }
+
+        // 4. جلب البيانات بعد تطبيق الفلاتر
+        return MaintenanceCenterResource::collection($query->get());
     }
 
     public function store(Request $request)

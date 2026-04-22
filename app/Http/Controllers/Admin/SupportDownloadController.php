@@ -10,9 +10,23 @@ use Illuminate\Support\Facades\Storage;
 
 class SupportDownloadController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return SupportDownloadResource::collection(SupportDownload::all());
+        // 1. بدء الاستعلام
+        $query = SupportDownload::query();
+
+        // 2. الفلترة (البحث في عنوان الملف بجميع اللغات)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('title->ar', 'LIKE', "%{$search}%")
+                  ->orWhere('title->en', 'LIKE', "%{$search}%")
+                  ->orWhere('title->ku', 'LIKE', "%{$search}%");
+            });
+        }
+
+        // 3. جلب البيانات
+        return SupportDownloadResource::collection($query->get());
     }
 
     public function store(Request $request)
