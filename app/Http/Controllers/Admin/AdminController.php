@@ -10,6 +10,18 @@ use Illuminate\Support\Facades\Hash;
 class AdminController extends Controller
 {
     /**
+     * جلب جميع المدراء
+     */
+    public function index()
+    {
+        $admins = Admin::all();
+        return response()->json([
+            'status' => true,
+            'data' => $admins
+        ], 200);
+    }
+
+    /**
      * تسجيل الدخول (Login)
      */
     public function login(Request $request)
@@ -48,6 +60,19 @@ class AdminController extends Controller
         return response()->json([
             'status' => true,
             'data' => $request->user()
+        ], 200);
+    }
+
+    /**
+     * عرض بيانات مدير محدد
+     */
+    public function show($id)
+    {
+        $admin = Admin::findOrFail($id);
+
+        return response()->json([
+            'status' => true,
+            'data' => $admin
         ], 200);
     }
 

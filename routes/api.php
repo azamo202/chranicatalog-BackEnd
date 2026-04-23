@@ -78,6 +78,9 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware(CheckSuperAdmin::class);
     Route::get('/admin/profile', [AdminController::class, 'profile']);
     Route::post('/admin/logout', [AdminController::class, 'logout']);
+    Route::get('/admin/users', [AdminController::class, 'index']);
+    Route::get('/admin/users/{id}', [AdminController::class, 'show']);
+
     // مسارات إدارة الأقسام (إضافة، تعديل، حذف)
     Route::post('/categories', [CategoryController::class, 'store']);
     // نستخدم POST مع تمرير _method=PUT في الـ FormData لدعم رفع الملفات في Laravel
