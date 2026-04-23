@@ -51,11 +51,6 @@ class SiteProductController extends Controller
             });
         }
 
-        // 5.1 البحث المخصص برقم الموديل (في حال تم إرسال حقل منفصل للموديل من الواجهة)
-        if ($request->filled('model_number')) {
-            $query->where('model_number', 'LIKE', "%{$request->model_number}%");
-        }
-
         // 6. الترتيب
         if ($request->filled('sort')) {
             if ($request->sort === 'price_asc') {

@@ -54,6 +54,11 @@ class ProductController extends Controller
             });
         }
 
+        // الفلترة المخصصة برقم الموديل
+        if ($request->filled('model_number')) {
+            $query->where('model_number', 'LIKE', "%{$request->model_number}%");
+        }
+
         // الفلترة حسب حالة المنتج (معروض / مخفي)
         if ($request->filled('is_active')) {
             $query->where('is_active', $request->boolean('is_active'));
