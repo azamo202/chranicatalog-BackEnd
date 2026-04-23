@@ -106,6 +106,54 @@ class AdminController extends Controller
     }
 
     /**
+     * تحديث بيانات مدير (Update)
+     */
+    public function update(Request $request, $id)
+    {
+        $admin = Admin::findOrFail($id);
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:admins,email,' . $id, // استثناء المدير الحالي من قاعدة المنع
+            'password' => 'nullable|string|min:6', // جعل كلمة المرور اختيارية عند التعديل
+            'role' => 'required|in:admin,super_admin',
+        ]);
+
+        $data = [
+            'name' => $request->name,
+            'email' => $request->email,
+            'role' => $request->role,
+        ];
+
+        // تحديث كلمة المرور فقط في حال تم إرسالها في الطلب
+        if ($request->filled('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        $admin->update($data);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم تحديث بيانات المدير بنجاح.',
+            'data' => $admin
+        ], 200);
+    }
+
+    /**
+     * حذف مدير (Destroy)
+     */
+    public function destroy($id)
+    {
+        $admin = Admin::findOrFail($id);
+        $admin->delete();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'تم حذف المدير بنجاح.'
+        ], 200);
+    }
+
+    /**
      * تسجيل الخروج (Logout)
      */
     public function logout(Request $request)

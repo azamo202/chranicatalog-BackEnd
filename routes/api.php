@@ -80,6 +80,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/admin/logout', [AdminController::class, 'logout']);
     Route::get('/admin/users', [AdminController::class, 'index']);
     Route::get('/admin/users/{id}', [AdminController::class, 'show']);
+    Route::put('/admin/users/{id}', [AdminController::class, 'update'])->middleware(CheckSuperAdmin::class);
+    Route::delete('/admin/users/{id}', [AdminController::class, 'destroy'])->middleware(CheckSuperAdmin::class);
+
 
     // مسارات إدارة الأقسام (إضافة، تعديل، حذف)
     Route::post('/categories', [CategoryController::class, 'store']);
