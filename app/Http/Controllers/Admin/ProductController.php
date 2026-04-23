@@ -54,6 +54,11 @@ class ProductController extends Controller
             });
         }
 
+        // الفلترة حسب حالة المنتج (معروض / مخفي)
+        if ($request->filled('is_active')) {
+            $query->where('is_active', $request->boolean('is_active'));
+        }
+
         // 6. الترتيب (الأحدث، أو الأرخص، أو الأغلى)
         if ($request->filled('sort')) {
             if ($request->sort === 'price_asc') {
