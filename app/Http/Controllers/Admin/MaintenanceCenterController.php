@@ -21,6 +21,9 @@ class MaintenanceCenterController extends Controller
                 $q->where('name->ar', 'LIKE', "%{$search}%")
                   ->orWhere('name->en', 'LIKE', "%{$search}%")
                   ->orWhere('name->ku', 'LIKE', "%{$search}%")
+                  ->orWhere('city->ar', 'LIKE', "%{$search}%")
+                  ->orWhere('city->en', 'LIKE', "%{$search}%")
+                  ->orWhere('city->ku', 'LIKE', "%{$search}%")
                   ->orWhere('phone', 'LIKE', "%{$search}%")
                   ->orWhere('address->ar', 'LIKE', "%{$search}%")
                   ->orWhere('address->en', 'LIKE', "%{$search}%")
@@ -44,6 +47,10 @@ class MaintenanceCenterController extends Controller
             'name.ar' => 'required|string',
             'name.en' => 'nullable|string',
             'name.ku' => 'nullable|string',
+            'city' => 'required|array',
+            'city.ar' => 'required|string',
+            'city.en' => 'nullable|string',
+            'city.ku' => 'nullable|string',
             'phone' => 'required|string',
             'address' => 'required|array',
             'address.ar' => 'required|string',
@@ -64,6 +71,11 @@ class MaintenanceCenterController extends Controller
             'name.ar' => 'sometimes|string',
             'name.en' => 'nullable|string',
             'name.ku' => 'nullable|string',
+
+            'city' => 'sometimes|array',
+            'city.ar' => 'sometimes|string',
+            'city.en' => 'nullable|string',
+            'city.ku' => 'nullable|string',
 
             'phone' => 'sometimes|string',
 

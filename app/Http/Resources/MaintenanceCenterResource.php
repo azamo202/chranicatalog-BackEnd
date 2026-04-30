@@ -17,6 +17,7 @@ class MaintenanceCenterResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->getTranslations('name'),
+            'city' => $this->getTranslations('city'),
             'phone' => $this->phone,
             'address' => $this->getTranslations('address'),
             'location_link' => $this->location_link,

@@ -9,6 +9,6 @@ class MaintenanceCenter extends Model
 {
     use HasTranslations;
 
-    protected $fillable = ['name', 'phone', 'address', 'location_link'];
-    public $translatable = ['name', 'address'];
+    protected $fillable = ['name', 'city', 'phone', 'address', 'location_link'];
+    public $translatable = ['name', 'city', 'address'];
 }

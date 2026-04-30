@@ -87,6 +87,9 @@ class ProductController extends Controller
     /**
      * عرض تفاصيل منتج واحد (لصفحة المنتج في Next.js)
      */
+       /**
+     * عرض تفاصيل منتج واحد (لصفحة المنتج في Next.js / لوحة التحكم)
+     */
     public function show($id, $slug = null)
     {
         // نبحث بالـ ID لأنه الأسرع (Primary Key)
@@ -96,9 +99,13 @@ class ProductController extends Controller
 
         return response()->json([
             'status' => true,
-            'data' => new ProductResource($product)
+            // التعديل هنا: إرجاع المنتج مباشرة بدون ProductResource
+            // لكي تستلم لوحة التحكم (React) المصفوفات والتراجم بشكلها الأصلي
+            // وتتمكن من وضعها في حقول التعديل بشكل صحيح
+            'data' => $product
         ]);
     }
+
 
     /**
      * إضافة منتج جديد (للوحة التحكم)
