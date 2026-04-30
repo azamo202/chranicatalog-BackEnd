@@ -50,6 +50,9 @@ class ProductController extends Controller
                 $q->where('name->ar', 'LIKE', "%{$search}%")
                     ->orWhere('name->en', 'LIKE', "%{$search}%")
                     ->orWhere('name->ku', 'LIKE', "%{$search}%")
+                    ->orWhere('origin_country->ar', 'LIKE', "%{$search}%")
+                    ->orWhere('origin_country->en', 'LIKE', "%{$search}%")
+                    ->orWhere('origin_country->ku', 'LIKE', "%{$search}%")
                     ->orWhere('model_number', 'LIKE', "%{$search}%"); // البحث برقم الموديل أيضاً!
             });
         }
@@ -114,6 +117,11 @@ class ProductController extends Controller
             'description.ar' => 'nullable|string',
             'description.en' => 'nullable|string',
             'description.ku' => 'nullable|string', // إضافة الكردية للوصف
+
+            'origin_country' => 'nullable|array',
+            'origin_country.ar' => 'nullable|string',
+            'origin_country.en' => 'nullable|string',
+            'origin_country.ku' => 'nullable|string',
 
             'category_id' => 'required|exists:categories,id',
             'brand_id' => 'required|exists:brands,id',
@@ -198,6 +206,11 @@ class ProductController extends Controller
             'description.ar' => 'nullable|string',
             'description.en' => 'nullable|string',
             'description.ku' => 'nullable|string',
+
+            'origin_country' => 'nullable|array',
+            'origin_country.ar' => 'nullable|string',
+            'origin_country.en' => 'nullable|string',
+            'origin_country.ku' => 'nullable|string',
 
             'category_id' => 'required|exists:categories,id',
             'brand_id' => 'required|exists:brands,id',

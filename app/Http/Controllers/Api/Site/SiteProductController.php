@@ -47,6 +47,9 @@ class SiteProductController extends Controller
                 $q->where('name->ar', 'LIKE', "%{$search}%")
                   ->orWhere('name->en', 'LIKE', "%{$search}%")
                   ->orWhere('name->ku', 'LIKE', "%{$search}%")
+                  ->orWhere('origin_country->ar', 'LIKE', "%{$search}%")
+                  ->orWhere('origin_country->en', 'LIKE', "%{$search}%")
+                  ->orWhere('origin_country->ku', 'LIKE', "%{$search}%")
                   ->orWhere('model_number', 'LIKE', "%{$search}%");
             });
         }

@@ -20,7 +20,7 @@ class Product extends Model
         'price'
     ];
 
-    public $translatable = ['name', 'description'];
+    public $translatable = ['name', 'description' , 'origin_country'];
 
     // القسم
     public function category()
