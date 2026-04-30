@@ -14,7 +14,7 @@ class ProductResource extends JsonResource
             'name' => $this->getTranslations('name'),
             'slug' => $this->slug,
             'model_number' => $this->model_number,
-            'origin_country' => $this->origin_country,
+            'origin_country' => $this->getTranslations('origin_country'),
             'description' => $this->getTranslations('description'),
             'price' => $this->price,
             'is_active' => (bool) $this->is_active,
