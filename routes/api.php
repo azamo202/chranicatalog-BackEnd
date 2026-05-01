@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\Site\SiteBrandController;
 use App\Http\Controllers\Api\Site\SiteCategoryController;
 use App\Http\Controllers\Api\Site\SiteProductController;
 use App\Http\Controllers\Api\Site\SiteSupportController;
+use App\Http\Controllers\Api\FrontHomepageController;
 use App\Http\Middleware\CheckSuperAdmin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -27,7 +28,7 @@ Route::get('/user', function (Request $request) {
 Route::prefix('site')->group(function () {
 
     // مسار الصفحة الرئيسية (جلب الأقسام الديناميكية مع منتجاتها)
-    Route::get('/home-sections', [\App\Http\Controllers\Api\FrontHomepageController::class, 'getActiveSections']);
+    Route::get('/home-sections', [FrontHomepageController::class, 'getActiveSections']);
 
     // مسارات المنتجات الخاصة بالكتالوج
     Route::get('/products', [SiteProductController::class, 'index']);
