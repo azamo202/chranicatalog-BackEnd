@@ -57,4 +57,10 @@ class Product extends Model
     {
         return $this->belongsToMany(AttributeValue::class, 'attribute_value_product');
     }
+
+    // أقسام الصفحة الرئيسية
+    public function homepageSections()
+    {
+        return $this->belongsToMany(HomepageSection::class, 'homepage_section_product');
+    }
 }

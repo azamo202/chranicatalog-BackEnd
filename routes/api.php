@@ -26,6 +26,9 @@ Route::get('/user', function (Request $request) {
 // =========================================================
 Route::prefix('site')->group(function () {
 
+    // مسار الصفحة الرئيسية (جلب الأقسام الديناميكية مع منتجاتها)
+    Route::get('/home-sections', [\App\Http\Controllers\Api\FrontHomepageController::class, 'getActiveSections']);
+
     // مسارات المنتجات الخاصة بالكتالوج
     Route::get('/products', [SiteProductController::class, 'index']);
     Route::get('/products/{id}/{slug?}', [SiteProductController::class, 'show']);
@@ -114,4 +117,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/support-downloads/{id}', [SupportDownloadController::class, 'update']);
     Route::delete('/support-downloads/{id}', [SupportDownloadController::class, 'destroy']);
     Route::get('/admin/dashboard-stats', [DashboardController::class, 'index']);
+
+    // مسارات إدارة أقسام الصفحة الرئيسية (Homepage Sections)
+    Route::get('/homepage-sections', [\App\Http\Controllers\Admin\HomepageSectionController::class, 'index']);
+    Route::post('/homepage-sections', [\App\Http\Controllers\Admin\HomepageSectionController::class, 'store']);
+    Route::get('/homepage-sections/{id}', [\App\Http\Controllers\Admin\HomepageSectionController::class, 'show']);
+    Route::put('/homepage-sections/{id}', [\App\Http\Controllers\Admin\HomepageSectionController::class, 'update']);
+    Route::delete('/homepage-sections/{id}', [\App\Http\Controllers\Admin\HomepageSectionController::class, 'destroy']);
+    Route::post('/homepage-sections/{id}/products/attach', [\App\Http\Controllers\Admin\HomepageSectionController::class, 'attachProducts']);
+    Route::post('/homepage-sections/{id}/products/detach', [\App\Http\Controllers\Admin\HomepageSectionController::class, 'detachProducts']);
 });
