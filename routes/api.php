@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\MaintenanceCenterController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\StoreSettingController;
 use App\Http\Controllers\Admin\SupportDownloadController;
 use App\Http\Controllers\Admin\SupportVideoController;
 use App\Http\Controllers\Api\Site\SiteBrandController;
@@ -44,6 +45,7 @@ Route::prefix('site')->group(function () {
     Route::get('/maintenance-centers', [SiteSupportController::class, 'maintenanceCenters']);
     Route::get('/videos', [SiteSupportController::class, 'videos']);
     Route::get('/downloads', [SiteSupportController::class, 'downloads']);
+    Route::get('/store-settings', [StoreSettingController::class, 'index']);
 });
 
 
@@ -120,11 +122,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/dashboard-stats', [DashboardController::class, 'index']);
 
     // مسارات إدارة أقسام الصفحة الرئيسية (Homepage Sections)
-    Route::get('/homepage-sections', [\App\Http\Controllers\Admin\HomepageSectionController::class, 'index']);
-    Route::post('/homepage-sections', [\App\Http\Controllers\Admin\HomepageSectionController::class, 'store']);
-    Route::get('/homepage-sections/{id}', [\App\Http\Controllers\Admin\HomepageSectionController::class, 'show']);
-    Route::put('/homepage-sections/{id}', [\App\Http\Controllers\Admin\HomepageSectionController::class, 'update']);
-    Route::delete('/homepage-sections/{id}', [\App\Http\Controllers\Admin\HomepageSectionController::class, 'destroy']);
-    Route::post('/homepage-sections/{id}/products/attach', [\App\Http\Controllers\Admin\HomepageSectionController::class, 'attachProducts']);
-    Route::post('/homepage-sections/{id}/products/detach', [\App\Http\Controllers\Admin\HomepageSectionController::class, 'detachProducts']);
+    Route::get('/homepage-sections', [HomepageSectionController::class, 'index']);
+    Route::post('/homepage-sections', [HomepageSectionController::class, 'store']);
+    Route::get('/homepage-sections/{id}', [HomepageSectionController::class, 'show']);
+    Route::put('/homepage-sections/{id}', [HomepageSectionController::class, 'update']);
+    Route::delete('/homepage-sections/{id}', [HomepageSectionController::class, 'destroy']);
+    Route::post('/homepage-sections/{id}/products/attach', [HomepageSectionController::class, 'attachProducts']);
+    Route::post('/homepage-sections/{id}/products/detach', [HomepageSectionController::class, 'detachProducts']);
+
+    // مسارات إعدادات المتجر (Store Settings)
+    Route::get('/store-settings', [StoreSettingController::class, 'index']);
+    Route::post('/store-settings', [StoreSettingController::class, 'update']);
 });
