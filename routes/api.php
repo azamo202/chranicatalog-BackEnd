@@ -32,6 +32,7 @@ Route::prefix('site')->group(function () {
     Route::get('/home-sections', [FrontHomepageController::class, 'getActiveSections']);
 
     // مسارات المنتجات الخاصة بالكتالوج
+    Route::get('/products/compare', [SiteProductController::class, 'compare']);
     Route::get('/products', [SiteProductController::class, 'index']);
     Route::get('/products/{id}/{slug?}', [SiteProductController::class, 'show']);
 

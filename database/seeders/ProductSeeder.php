@@ -91,7 +91,6 @@ class ProductSeeder extends Seeder
                 $modelNumber = strtoupper(Str::random(3)) . '-' . rand(1000, 9999);
                 $brand = $brands[$brandsData[array_rand($brandsData)]];
                 $origin = $origins[array_rand($origins)];
-                $price = rand(150, 1500) + (rand(0, 99) / 100); // توليد سعر عشري منطقي مثل 450.99
 
                 // السلاج يجب أن يكون فريداً لتجنب مشاكل Unique Constraint
                 $slug = Str::slug($template['en'] . '-' . $modelNumber);
@@ -108,7 +107,6 @@ class ProductSeeder extends Seeder
                     'model_number' => $modelNumber,
                     'origin_country' => $origin,
                     'description' => $descriptions, // تم توحيد الوصف ليكون احترافي ومناسب للجميع
-                    'price' => $price,
                     'is_active' => true,
                 ]);
             }

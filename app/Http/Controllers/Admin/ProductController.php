@@ -34,14 +34,6 @@ class ProductController extends Controller
             $query->where('brand_id', $request->brand_id);
         }
 
-        // 4. الفلترة حسب السعر (أقل سعر وأعلى سعر)
-        if ($request->filled('min_price')) {
-            $query->where('price', '>=', $request->min_price);
-        }
-        if ($request->filled('max_price')) {
-            $query->where('price', '<=', $request->max_price);
-        }
-
         // 5. البحث النصي المتقدم (في الاسم باللغات الثلاث)
         if ($request->filled('search')) {
             $search = $request->search;
@@ -67,18 +59,8 @@ class ProductController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
 
-        // 6. الترتيب (الأحدث، أو الأرخص، أو الأغلى)
-        if ($request->filled('sort')) {
-            if ($request->sort === 'price_asc') {
-                $query->orderBy('price', 'asc');
-            } elseif ($request->sort === 'price_desc') {
-                $query->orderBy('price', 'desc');
-            } else {
-                $query->latest(); // الافتراضي
-            }
-        } else {
-            $query->latest();
-        }
+        // 6. الترتيب (الأحدث)
+        $query->latest();
 
         // 7. جلب البيانات مع التقسيم (Pagination)
         $products = $query->get();
@@ -132,7 +114,6 @@ class ProductController extends Controller
 
             'category_id' => 'required|exists:categories,id',
             'brand_id' => 'required|exists:brands,id',
-            'price' => 'nullable|numeric|min:0', // التحقق من السعر
             'images.*' => 'nullable|image|max:2048',
         ]);
 
@@ -150,7 +131,6 @@ class ProductController extends Controller
                 'brand_id' => $request->brand_id,
                 'model_number' => $request->model_number,
                 'origin_country' => $request->origin_country,
-                'price' => $request->price, // حفظ السعر
                 'description' => $request->description,
                 'is_active' => $request->is_active ?? true,
             ]);
@@ -221,7 +201,6 @@ class ProductController extends Controller
 
             'category_id' => 'required|exists:categories,id',
             'brand_id' => 'required|exists:brands,id',
-            'price' => 'nullable|numeric|min:0',
             'images.*' => 'nullable|image|max:2048',
         ]);
 
@@ -234,7 +213,6 @@ class ProductController extends Controller
                 'brand_id',
                 'model_number',
                 'origin_country',
-                'price',
                 'is_active',
                 'name',
                 'description'

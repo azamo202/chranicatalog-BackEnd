@@ -16,7 +16,6 @@ class ProductResource extends JsonResource
             'model_number' => $this->model_number,
             'origin_country' => $this->getTranslations('origin_country'),
             'description' => $this->getTranslations('description'),
-            'price' => $this->price,
             'is_active' => (bool) $this->is_active,
 
             // جلب القسم والعلامة التجارية (إذا تم تحميلهما Eager Loading)
