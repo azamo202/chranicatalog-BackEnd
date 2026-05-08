@@ -20,11 +20,21 @@ class SiteProductController extends Controller
                 $q->where('is_primary', true); 
             }]);
 
-        // 2. الفلترة حسب القسم (عبر الرابط)
+        // 2. الفلترة حسب القسم (يدعم التصنيفات الفرعية والقيم المتعددة)
         if ($request->filled('category_slug')) {
-            $query->whereHas('category', function ($q) use ($request) {
-                $q->where('slug', $request->category_slug);
-            });
+            $slugs = is_array($request->category_slug) 
+                ? $request->category_slug 
+                : explode(',', $request->category_slug);
+
+            $categoryIds = \App\Models\Category::whereIn('slug', $slugs)
+                ->get()
+                ->flatMap(function($category) {
+                    // جلب معرف القسم الحالي + جميع معرفات الأقسام الفرعية التابعة له
+                    return [$category->id, ...$category->children()->pluck('id')->toArray()];
+                })
+                ->unique();
+
+            $query->whereIn('category_id', $categoryIds);
         }
 
         // 3. الفلترة حسب الماركة
