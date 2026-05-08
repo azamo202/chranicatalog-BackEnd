@@ -73,7 +73,7 @@ class SiteProductController extends Controller
         // البحث باستخدام الـ ID لسرعة الأداء والتأكد من أن المنتج فعال
         $product = Product::where('id', $id)
             ->where('is_active', true)
-            ->with(['category', 'brand', 'images', 'specifications', 'features'])
+            ->with(['category.parent', 'brand', 'images', 'specifications', 'features'])
             ->firstOrFail();
 
         return response()->json([
