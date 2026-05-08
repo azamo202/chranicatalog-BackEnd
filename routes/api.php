@@ -48,6 +48,7 @@ Route::prefix('site')->group(function () {
     Route::get('/videos', [SiteSupportController::class, 'videos']);
     Route::get('/downloads', [SiteSupportController::class, 'downloads']);
     Route::get('/store-settings', [StoreSettingController::class, 'index']);
+    Route::post('/contact', [\App\Http\Controllers\Api\Site\SiteContactController::class, 'send']);
 });
 
 
