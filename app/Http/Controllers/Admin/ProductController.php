@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Admin; // تأكد أن المسار Api وليس
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Http\Resources\ProductResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
@@ -136,12 +138,13 @@ class ProductController extends Controller
             ]);
 
             // 3. معالجة الصور
+            $primaryIndex = $request->input('primary_image_index', 0);
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $index => $image) {
                     $path = $image->store('products', 'public');
                     $product->images()->create([
                         'image_path' => $path,
-                        'is_primary' => $index === 0 ? true : false,
+                        'is_primary' => (int)$primaryIndex === $index,
                     ]);
                 }
             }
@@ -233,11 +236,23 @@ class ProductController extends Controller
 
             // 4. معالجة الصور الإضافية
             if ($request->hasFile('images')) {
-                foreach ($request->file('images') as $image) {
+                $primaryIndex = $request->input('primary_image_index');
+                
+                // إذا تم تحديد صورة جديدة لتكون هي الرئيسية، قم بإلغاء الرئيسية عن الصور القديمة
+                if ($primaryIndex !== null && $primaryIndex !== '') {
+                    $product->images()->update(['is_primary' => false]);
+                }
+                
+                // إذا لم تكن هناك أي صور للمنتج، نجعل الصورة الأولى المرفوعة هي الأساسية
+                if (($primaryIndex === null || $primaryIndex === '') && $product->images()->count() === 0) {
+                    $primaryIndex = 0;
+                }
+
+                foreach ($request->file('images') as $index => $image) {
                     $path = $image->store('products', 'public');
                     $product->images()->create([
                         'image_path' => $path,
-                        'is_primary' => false,
+                        'is_primary' => ($primaryIndex !== null && $primaryIndex !== '') ? ((int)$primaryIndex === $index) : false,
                     ]);
                 }
             }
@@ -285,5 +300,68 @@ class ProductController extends Controller
             'status' => true,
             'message' => 'تم حذف المنتج بنجاح'
         ]);
+    }
+
+    /**
+     * تعيين صورة كصورة أساسية للمنتج
+     */
+    public function setPrimaryImage($id)
+    {
+        $image = ProductImage::findOrFail($id);
+        
+        DB::beginTransaction();
+        try {
+            // إلغاء تعيين الصورة الأساسية القديمة للمنتج
+            ProductImage::where('product_id', $image->product_id)
+                ->update(['is_primary' => false]);
+                
+            // تعيين هذه الصورة كأساسية
+            $image->update(['is_primary' => true]);
+            
+            DB::commit();
+            
+            return response()->json([
+                'status' => true,
+                'message' => 'تم تعيين الصورة كصورة رئيسية بنجاح'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * حذف صورة معينة من المنتج
+     */
+    public function deleteImage($id)
+    {
+        $image = ProductImage::findOrFail($id);
+        $productId = $image->product_id;
+        $wasPrimary = $image->is_primary;
+
+        try {
+            // حذف الملف الفيزيائي
+            if (Storage::disk('public')->exists($image->image_path)) {
+                Storage::disk('public')->delete($image->image_path);
+            }
+
+            // حذف السجل من قاعدة البيانات
+            $image->delete();
+
+            // إذا كانت الصورة المحذوفة هي الأساسية، نعين أول صورة متبقية كصورة أساسية
+            if ($wasPrimary) {
+                $nextImage = ProductImage::where('product_id', $productId)->first();
+                if ($nextImage) {
+                    $nextImage->update(['is_primary' => true]);
+                }
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'تم حذف الصورة بنجاح'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 }

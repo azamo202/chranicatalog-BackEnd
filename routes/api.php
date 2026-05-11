@@ -104,6 +104,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // نستخدم POST مع تمرير _method=PUT في الـ FormData لدعم رفع الصور
     Route::post('/products/{id}', [ProductController::class, 'update']);
     Route::delete('/products/{id}', [ProductController::class, 'destroy']);
+    
+    // إدارة صور المنتجات
+    Route::post('/products/images/{id}/set-primary', [ProductController::class, 'setPrimaryImage']);
+    Route::delete('/products/images/{id}', [ProductController::class, 'deleteImage']);
 
     // مسارات إدارة العلامات التجارية
     Route::post('/brands', [BrandController::class, 'store']);
