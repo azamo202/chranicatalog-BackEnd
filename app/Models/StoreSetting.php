@@ -15,4 +15,9 @@ class StoreSetting extends Model
         'instagram',
         'youtube',
     ];
+
+    protected $casts = [
+        'phone' => 'array',
+    ];
 }
+

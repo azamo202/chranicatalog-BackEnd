@@ -19,7 +19,8 @@ class StoreSettingController extends Controller
     public function update(Request $request)
     {
         $validatedData = $request->validate([
-            'phone' => 'nullable|string',
+            'phone' => 'nullable|array',
+            'phone.*' => 'nullable|string',
             'whatsapp' => 'nullable|string',
             'email' => 'nullable|email',
             'tiktok' => 'nullable|url',

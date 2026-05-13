@@ -11,4 +11,8 @@ class MaintenanceCenter extends Model
 
     protected $fillable = ['name', 'city', 'phone', 'address', 'location_link'];
     public $translatable = ['name', 'city', 'address'];
+
+    protected $casts = [
+        'phone' => 'array',
+    ];
 }

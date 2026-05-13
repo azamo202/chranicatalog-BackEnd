@@ -51,7 +51,8 @@ class MaintenanceCenterController extends Controller
             'city.ar' => 'required|string',
             'city.en' => 'nullable|string',
             'city.ku' => 'nullable|string',
-            'phone' => 'required|string',
+            'phone' => 'required|array',
+            'phone.*' => 'required|string',
             'address' => 'required|array',
             'address.ar' => 'required|string',
             'address.en' => 'nullable|string',
@@ -77,7 +78,8 @@ class MaintenanceCenterController extends Controller
             'city.en' => 'nullable|string',
             'city.ku' => 'nullable|string',
 
-            'phone' => 'sometimes|string',
+            'phone' => 'sometimes|array',
+            'phone.*' => 'sometimes|string',
 
             'address' => 'sometimes|array',
             'address.ar' => 'sometimes|string',
