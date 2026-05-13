@@ -48,7 +48,7 @@ Route::prefix('site')->group(function () {
     Route::get('/videos', [SiteSupportController::class, 'videos']);
     Route::get('/downloads', [SiteSupportController::class, 'downloads']);
     Route::get('/store-settings', [StoreSettingController::class, 'index']);
-    Route::post('/contact', [\App\Http\Controllers\Api\Site\SiteContactController::class, 'send']);
+    Route::post('/contact', [SiteContactController::class, 'send']);
 });
 
 
@@ -115,12 +115,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/brands/{id}', [BrandController::class, 'update']);
     Route::delete('/brands/{id}', [BrandController::class, 'destroy']);
     Route::post('/maintenance-centers', [MaintenanceCenterController::class, 'store']);
-    Route::post('/maintenance-centers/{id}', [MaintenanceCenterController::class, 'update']);
+    Route::put('/maintenance-centers/{id}', [MaintenanceCenterController::class, 'update']);
     Route::delete('/maintenance-centers/{id}', [MaintenanceCenterController::class, 'destroy']);
 
     Route::post('/support-videos', [SupportVideoController::class, 'store']);
     Route::post('/support-videos', [SupportVideoController::class, 'store']);
-    Route::post('/support-videos/{id}', [SupportVideoController::class, 'update']);
+    Route::put('/support-videos/{id}', [SupportVideoController::class, 'update']);
     Route::delete('/support-videos/{id}', [SupportVideoController::class, 'destroy']);
 
     Route::post('/support-downloads', [SupportDownloadController::class, 'store']);
