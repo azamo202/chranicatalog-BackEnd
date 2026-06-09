@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
 use App\Models\HomepageSection;
+use App\Services\RevalidationService;
 
 class HomepageSectionController extends Controller
 {
@@ -71,6 +72,9 @@ class HomepageSectionController extends Controller
         // Sync without detaching to add new ones, or sync() to replace. Let's use syncWithoutDetaching
         $section->products()->syncWithoutDetaching($request->product_ids);
 
+        // Revalidate homepage sections since relationship changed
+        RevalidationService::revalidate(['home-sections']);
+
         return response()->json(['status' => 'success', 'message' => 'Products attached successfully']);
     }
 
@@ -83,6 +87,9 @@ class HomepageSectionController extends Controller
 
         $section = HomepageSection::findOrFail($id);
         $section->products()->detach($request->product_ids);
+
+        // Revalidate homepage sections since relationship changed
+        RevalidationService::revalidate(['home-sections']);
 
         return response()->json(['status' => 'success', 'message' => 'Products detached successfully']);
     }
