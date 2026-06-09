@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\Site\SiteCategoryController;
 use App\Http\Controllers\Api\Site\SiteProductController;
 use App\Http\Controllers\Api\Site\SiteSupportController;
 use App\Http\Controllers\Api\FrontHomepageController;
+use App\Http\Controllers\Api\Site\SiteContactController;
 use App\Http\Middleware\CheckSuperAdmin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
