@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\SupportVideo;
 use App\Http\Resources\SupportVideoResource;
 use Illuminate\Http\Request;
+use App\Services\YoutubeService;
+use App\Rules\ValidYoutube;
 
 class SupportVideoController extends Controller
 {
@@ -35,10 +37,14 @@ class SupportVideoController extends Controller
             'title.ar' => 'required|string',
             'title.en' => 'nullable|string',
             'title.ku' => 'nullable|string',
-            'youtube_url' => 'required|url',
+            'youtube_url' => ['required', 'string', new ValidYoutube],
         ]);
 
-        $video = SupportVideo::create($request->all());
+        $data = $request->all();
+        $data['youtube_id'] = YoutubeService::extractId($request->youtube_url);
+        unset($data['youtube_url']);
+
+        $video = SupportVideo::create($data);
         return response()->json(['status' => true, 'message' => 'تم إضافة الفيديو بنجاح', 'data' => new SupportVideoResource($video)], 201);
     }
 
@@ -48,10 +54,14 @@ class SupportVideoController extends Controller
         $request->validate([
             'title' => 'required|array',
             'title.ar' => 'required|string',
-            'youtube_url' => 'required|url',
+            'youtube_url' => ['required', 'string', new ValidYoutube],
         ]);
 
-        $video->update($request->all());
+        $data = $request->all();
+        $data['youtube_id'] = YoutubeService::extractId($request->youtube_url);
+        unset($data['youtube_url']);
+
+        $video->update($data);
         return response()->json(['status' => true, 'message' => 'تم تحديث الفيديو بنجاح', 'data' => new SupportVideoResource($video)]);
     }
 

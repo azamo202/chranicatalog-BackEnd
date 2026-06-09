@@ -17,6 +17,7 @@ class SupportVideoResource extends JsonResource
         return [
             'id' => $this->id,
             'title' => $this->getTranslations('title'),
+            'youtube_id' => $this->youtube_id,
             'youtube_url' => $this->youtube_url,
         ];
     }
