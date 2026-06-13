@@ -36,7 +36,7 @@ class Product extends Model
     // معرض الصور
     public function images()
     {
-        return $this->hasMany(ProductImage::class);
+        return $this->hasMany(ProductImage::class)->orderBy('sort_order', 'asc');
     }
 
     // المواصفات الفنية المجمعة

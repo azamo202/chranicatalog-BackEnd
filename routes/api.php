@@ -109,6 +109,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // إدارة صور المنتجات
     Route::post('/products/images/{id}/set-primary', [ProductController::class, 'setPrimaryImage']);
     Route::delete('/products/images/{id}', [ProductController::class, 'deleteImage']);
+    Route::post('/products/{id}/reorder-images', [ProductController::class, 'reorderImages']);
 
     // مسارات إدارة العلامات التجارية
     Route::post('/brands', [BrandController::class, 'store']);

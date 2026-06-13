@@ -145,6 +145,7 @@ class ProductController extends Controller
                     $product->images()->create([
                         'image_path' => $path,
                         'is_primary' => (int)$primaryIndex === $index,
+                        'sort_order' => $index + 1,
                     ]);
                 }
             }
@@ -250,9 +251,11 @@ class ProductController extends Controller
 
                 foreach ($request->file('images') as $index => $image) {
                     $path = $image->store('products', 'public');
+                    $maxSortOrder = $product->images()->max('sort_order') ?? 0;
                     $product->images()->create([
                         'image_path' => $path,
                         'is_primary' => ($primaryIndex !== null && $primaryIndex !== '') ? ((int)$primaryIndex === $index) : false,
+                        'sort_order' => $maxSortOrder + 1,
                     ]);
                 }
             }
@@ -361,6 +364,38 @@ class ProductController extends Controller
                 'message' => 'تم حذف الصورة بنجاح'
             ]);
         } catch (\Exception $e) {
+            return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+    /**
+     * ترتيب صور المنتج
+     */
+    public function reorderImages(Request $request, $id)
+    {
+        $request->validate([
+            'image_ids' => 'required|array',
+            'image_ids.*' => 'exists:product_images,id'
+        ]);
+
+        $product = Product::findOrFail($id);
+        
+        DB::beginTransaction();
+        try {
+            foreach ($request->image_ids as $index => $imageId) {
+                // Ensure the image belongs to this product
+                ProductImage::where('id', $imageId)
+                    ->where('product_id', $product->id)
+                    ->update(['sort_order' => $index + 1]);
+            }
+            
+            DB::commit();
+            
+            return response()->json([
+                'status' => true,
+                'message' => 'تم تحديث ترتيب الصور بنجاح'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
         }
     }
