@@ -16,6 +16,7 @@ class FrontHomepageController extends Controller
             ->with(['products' => function($query) {
                 // optionally load images or other things here
                 $query->where('is_active', true)
+                      ->orderBy('sort_order', 'asc')
                       ->with(['category', 'brand', 'images']); 
             }])
             ->get();

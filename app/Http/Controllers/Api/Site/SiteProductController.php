@@ -57,7 +57,7 @@ class SiteProductController extends Controller
         }
 
         // 6. الترتيب
-        $query->latest();
+        $query->orderBy('sort_order', 'asc')->latest();
 
         // 7. التقسيم (Pagination)
         $products = $query->paginate(12);
