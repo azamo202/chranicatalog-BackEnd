@@ -45,6 +45,8 @@ class CategoryController extends Controller
         $data = $request->only(['name', 'parent_id', 'is_active', 'sort_order']);
         if (!empty($data['parent_id'])) {
             $data['sort_order'] = 0;
+        } else {
+            $data['sort_order'] = $this->adjustSortOrder(null, $data['sort_order'] ?? null, Category::whereNull('parent_id'));
         }
 
         $slugName = $request->name['en'] ?? $request->name['ar'];
@@ -95,6 +97,8 @@ class CategoryController extends Controller
         $data = $request->only(['name', 'parent_id', 'is_active', 'sort_order']);
         if (!empty($data['parent_id'])) {
             $data['sort_order'] = 0;
+        } else {
+            $data['sort_order'] = $this->adjustSortOrder($category->id, $data['sort_order'] ?? null, Category::whereNull('parent_id'));
         }
 
         $slugName = $request->name['en'] ?? $request->name['ar'];
@@ -112,6 +116,32 @@ class CategoryController extends Controller
             'message' => 'تم تحديث القسم بنجاح', // تم التصحيح هنا
             'data' => new CategoryResource($category)
         ], 200); // تم التصحيح هنا إلى 200 بدلاً من 201
+    }
+
+    private function adjustSortOrder($modelId, $newOrder, $query)
+    {
+        if (empty($newOrder) || $newOrder <= 0) {
+            $max = (clone $query)->max('sort_order') ?? 0;
+            return $max + 1;
+        }
+
+        $exists = (clone $query)
+            ->when($modelId, function($q) use ($modelId) {
+                $q->where('id', '!=', $modelId);
+            })
+            ->where('sort_order', $newOrder)
+            ->exists();
+
+        if ($exists) {
+            (clone $query)
+                ->when($modelId, function($q) use ($modelId) {
+                    $q->where('id', '!=', $modelId);
+                })
+                ->where('sort_order', '>=', $newOrder)
+                ->increment('sort_order');
+        }
+
+        return $newOrder;
     }
     /**
      * حذف القسم

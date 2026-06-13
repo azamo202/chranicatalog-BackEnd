@@ -44,6 +44,7 @@ class SupportVideoController extends Controller
         $data = $request->all();
         $data['youtube_id'] = YoutubeService::extractId($request->youtube_url);
         unset($data['youtube_url']);
+        $data['sort_order'] = $this->adjustSortOrder(null, $data['sort_order'] ?? null, SupportVideo::query());
 
         $video = SupportVideo::create($data);
         return response()->json(['status' => true, 'message' => 'تم إضافة الفيديو بنجاح', 'data' => new SupportVideoResource($video)], 201);
@@ -62,9 +63,36 @@ class SupportVideoController extends Controller
         $data = $request->all();
         $data['youtube_id'] = YoutubeService::extractId($request->youtube_url);
         unset($data['youtube_url']);
+        $data['sort_order'] = $this->adjustSortOrder($video->id, $data['sort_order'] ?? null, SupportVideo::query());
 
         $video->update($data);
         return response()->json(['status' => true, 'message' => 'تم تحديث الفيديو بنجاح', 'data' => new SupportVideoResource($video)]);
+    }
+
+    private function adjustSortOrder($modelId, $newOrder, $query)
+    {
+        if (empty($newOrder) || $newOrder <= 0) {
+            $max = (clone $query)->max('sort_order') ?? 0;
+            return $max + 1;
+        }
+
+        $exists = (clone $query)
+            ->when($modelId, function($q) use ($modelId) {
+                $q->where('id', '!=', $modelId);
+            })
+            ->where('sort_order', $newOrder)
+            ->exists();
+
+        if ($exists) {
+            (clone $query)
+                ->when($modelId, function($q) use ($modelId) {
+                    $q->where('id', '!=', $modelId);
+                })
+                ->where('sort_order', '>=', $newOrder)
+                ->increment('sort_order');
+        }
+
+        return $newOrder;
     }
 
     public function destroy($id)

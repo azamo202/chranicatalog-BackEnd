@@ -61,7 +61,10 @@ class MaintenanceCenterController extends Controller
             'sort_order' => 'nullable|integer',
         ]);
 
-        $center = MaintenanceCenter::create($request->all());
+        $data = $request->all();
+        $data['sort_order'] = $this->adjustSortOrder(null, $data['sort_order'] ?? null, MaintenanceCenter::query());
+
+        $center = MaintenanceCenter::create($data);
         return response()->json(['status' => true, 'message' => 'تم إضافة المركز بنجاح', 'data' => new MaintenanceCenterResource($center)], 201);
     }
 
@@ -90,8 +93,38 @@ class MaintenanceCenterController extends Controller
             'location_link' => 'nullable|url',
             'sort_order' => 'nullable|integer',
         ]);
-        $center->update($request->all());
+
+        $data = $request->all();
+        $data['sort_order'] = $this->adjustSortOrder($center->id, $data['sort_order'] ?? null, MaintenanceCenter::query());
+
+        $center->update($data);
         return response()->json(['status' => true, 'message' => 'تم تحديث بيانات المركز بنجاح', 'data' => new MaintenanceCenterResource($center)]);
+    }
+
+    private function adjustSortOrder($modelId, $newOrder, $query)
+    {
+        if (empty($newOrder) || $newOrder <= 0) {
+            $max = (clone $query)->max('sort_order') ?? 0;
+            return $max + 1;
+        }
+
+        $exists = (clone $query)
+            ->when($modelId, function($q) use ($modelId) {
+                $q->where('id', '!=', $modelId);
+            })
+            ->where('sort_order', $newOrder)
+            ->exists();
+
+        if ($exists) {
+            (clone $query)
+                ->when($modelId, function($q) use ($modelId) {
+                    $q->where('id', '!=', $modelId);
+                })
+                ->where('sort_order', '>=', $newOrder)
+                ->increment('sort_order');
+        }
+
+        return $newOrder;
     }
 
     public function destroy($id)

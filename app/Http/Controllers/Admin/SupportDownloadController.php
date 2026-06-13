@@ -41,10 +41,12 @@ class SupportDownloadController extends Controller
         ]);
 
         $path = $request->file('file')->store('support_docs', 'public');
+        $sortOrder = $this->adjustSortOrder(null, $request->sort_order ?? null, SupportDownload::query());
+
         $download = SupportDownload::create([
             'title' => $request->title,
             'pdf_file_path' => $path,
-            'sort_order' => $request->sort_order ?? 0,
+            'sort_order' => $sortOrder,
         ]);
 
         return response()->json(['status' => true, 'message' => 'تم رفع الملف بنجاح', 'data' => new SupportDownloadResource($download)], 201);
@@ -64,9 +66,8 @@ class SupportDownloadController extends Controller
         ]);
 
         $data = ['title' => $request->title];
-        if ($request->has('sort_order')) {
-            $data['sort_order'] = $request->sort_order;
-        }
+        $sortOrder = $this->adjustSortOrder($download->id, $request->sort_order ?? null, SupportDownload::query());
+        $data['sort_order'] = $sortOrder;
 
         if ($request->hasFile('file')) {
             // حذف الملف القديم من التخزين
@@ -78,6 +79,32 @@ class SupportDownloadController extends Controller
         $download->update($data);
 
         return response()->json(['status' => true, 'message' => 'تم تحديث الملف بنجاح', 'data' => new SupportDownloadResource($download)]);
+    }
+
+    private function adjustSortOrder($modelId, $newOrder, $query)
+    {
+        if (empty($newOrder) || $newOrder <= 0) {
+            $max = (clone $query)->max('sort_order') ?? 0;
+            return $max + 1;
+        }
+
+        $exists = (clone $query)
+            ->when($modelId, function($q) use ($modelId) {
+                $q->where('id', '!=', $modelId);
+            })
+            ->where('sort_order', $newOrder)
+            ->exists();
+
+        if ($exists) {
+            (clone $query)
+                ->when($modelId, function($q) use ($modelId) {
+                    $q->where('id', '!=', $modelId);
+                })
+                ->where('sort_order', '>=', $newOrder)
+                ->increment('sort_order');
+        }
+
+        return $newOrder;
     }
 
     public function destroy($id)

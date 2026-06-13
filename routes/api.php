@@ -111,6 +111,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/products/images/{id}', [ProductController::class, 'deleteImage']);
     Route::post('/products/{id}/reorder-images', [ProductController::class, 'reorderImages']);
 
+    // إدارة ترتيب المنتجات في التصنيفات
+    Route::put('/products/{id}/sort', [ProductController::class, 'updateSortOrder']);
+    Route::post('/categories/{id}/products/auto-reorder', [ProductController::class, 'autoReorderCategoryProducts']);
+
     // مسارات إدارة العلامات التجارية
     Route::post('/brands', [BrandController::class, 'store']);
     // تذكر: عند التعديل ورفع صورة من الواجهة نستخدم POST مع _method=PUT

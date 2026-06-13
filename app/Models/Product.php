@@ -16,7 +16,8 @@ class Product extends Model
         'model_number',
         'origin_country',
         'description',
-        'is_active'
+        'is_active',
+        'sort_order'
     ];
 
     public $translatable = ['name', 'description' , 'origin_country'];

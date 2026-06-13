@@ -30,6 +30,10 @@ class ProductController extends Controller
                 $q->where('slug', $request->category_slug);
             });
         }
+        
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
 
         // 3. الفلترة حسب الماركة (Brand)
         if ($request->filled('brand_id')) {
@@ -61,8 +65,12 @@ class ProductController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
 
-        // 6. الترتيب (الأحدث)
-        $query->latest();
+        // 6. الترتيب (الترتيب حسب القسم إن وجد، وإلا الأحدث)
+        if ($request->filled('category_slug') || $request->filled('category_id')) {
+            $query->orderBy('sort_order', 'asc')->latest();
+        } else {
+            $query->latest();
+        }
 
         // 7. جلب البيانات مع التقسيم (Pagination)
         $products = $query->get();
@@ -126,6 +134,9 @@ class ProductController extends Controller
             $slugName = $request->name['en'] ?? $request->name['ar'];
 
             // 2. إنشاء المنتج الأساسي
+            $sortOrder = Product::where('category_id', $request->category_id)->max('sort_order');
+            $sortOrder = $sortOrder !== null ? $sortOrder + 1 : 1;
+
             $product = Product::create([
                 'name' => $request->name, // لارافل ستحفظ المصفوفة كـ JSON تلقائياً بفضل الحزمة
                 'slug' => Str::slug($slugName) . '-' . uniqid(),
@@ -135,6 +146,7 @@ class ProductController extends Controller
                 'origin_country' => $request->origin_country,
                 'description' => $request->description,
                 'is_active' => $request->is_active ?? true,
+                'sort_order' => $sortOrder,
             ]);
 
             // 3. معالجة الصور
@@ -393,6 +405,84 @@ class ProductController extends Controller
             return response()->json([
                 'status' => true,
                 'message' => 'تم تحديث ترتيب الصور بنجاح'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * تحديث ترتيب المنتج وإعادة ترتيب المنتجات الأخرى إذا لزم الأمر
+     */
+    public function updateSortOrder(Request $request, $id)
+    {
+        $request->validate([
+            'sort_order' => 'required|integer|min:1'
+        ]);
+
+        $product = Product::findOrFail($id);
+        $newSortOrder = $request->sort_order;
+        $categoryId = $product->category_id;
+        $oldSortOrder = $product->sort_order;
+
+        if ((int)$oldSortOrder === (int)$newSortOrder) {
+            return response()->json(['status' => true, 'message' => 'لم يتم تغيير الترتيب']);
+        }
+
+        DB::beginTransaction();
+        try {
+            // نتحقق مما إذا كان الرقم الجديد مستخدمًا مسبقًا في نفس القسم
+            $exists = Product::where('category_id', $categoryId)
+                             ->where('id', '!=', $product->id)
+                             ->where('sort_order', $newSortOrder)
+                             ->exists();
+
+            if ($exists) {
+                // دفع جميع المنتجات التي ترتيبها >= الرقم الجديد بزيادة 1
+                Product::where('category_id', $categoryId)
+                       ->where('id', '!=', $product->id)
+                       ->where('sort_order', '>=', $newSortOrder)
+                       ->increment('sort_order');
+            }
+
+            $product->update(['sort_order' => $newSortOrder]);
+
+            DB::commit();
+            return response()->json([
+                'status' => true,
+                'message' => 'تم تحديث الترتيب بنجاح'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * إعادة الترتيب التلقائي بشكل متسلسل
+     */
+    public function autoReorderCategoryProducts($categoryId)
+    {
+        DB::beginTransaction();
+        try {
+            $products = Product::where('category_id', $categoryId)
+                               ->orderBy('sort_order', 'asc')
+                               ->orderBy('id', 'asc')
+                               ->get();
+
+            $counter = 1;
+            foreach ($products as $product) {
+                if ($product->sort_order !== $counter) {
+                    $product->update(['sort_order' => $counter]);
+                }
+                $counter++;
+            }
+
+            DB::commit();
+            return response()->json([
+                'status' => true,
+                'message' => 'تم إعادة الترتيب التلقائي بنجاح'
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
