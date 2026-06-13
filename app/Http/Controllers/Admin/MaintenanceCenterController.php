@@ -108,20 +108,42 @@ class MaintenanceCenterController extends Controller
             return $max + 1;
         }
 
-        $exists = (clone $query)
-            ->when($modelId, function($q) use ($modelId) {
-                $q->where('id', '!=', $modelId);
-            })
-            ->where('sort_order', $newOrder)
-            ->exists();
+        $oldOrder = null;
+        if ($modelId) {
+            $oldOrder = (clone $query)->where('id', $modelId)->value('sort_order');
+        }
 
-        if ($exists) {
-            (clone $query)
-                ->when($modelId, function($q) use ($modelId) {
-                    $q->where('id', '!=', $modelId);
-                })
-                ->where('sort_order', '>=', $newOrder)
-                ->increment('sort_order');
+        if ($oldOrder !== null) {
+            $oldOrder = (int)$oldOrder;
+            $newOrder = (int)$newOrder;
+
+            if ($newOrder === $oldOrder) {
+                return $newOrder;
+            }
+
+            if ($newOrder < $oldOrder) {
+                // Moving up: Shift intermediate items down (increment)
+                (clone $query)
+                    ->where('id', '!=', $modelId)
+                    ->where('sort_order', '>=', $newOrder)
+                    ->where('sort_order', '<', $oldOrder)
+                    ->increment('sort_order');
+            } else {
+                // Moving down: Shift intermediate items up (decrement)
+                (clone $query)
+                    ->where('id', '!=', $modelId)
+                    ->where('sort_order', '>', $oldOrder)
+                    ->where('sort_order', '<=', $newOrder)
+                    ->decrement('sort_order');
+            }
+        } else {
+            // New item: Shift all items starting from newOrder up
+            $exists = (clone $query)->where('sort_order', $newOrder)->exists();
+            if ($exists) {
+                (clone $query)
+                    ->where('sort_order', '>=', $newOrder)
+                    ->increment('sort_order');
+            }
         }
 
         return $newOrder;

@@ -244,6 +244,12 @@ class ProductController extends Controller
                 'description'
             ]);
 
+            // إذا تغير القسم، نقوم بإسناد ترتيب جديد للمنتج في القسم الجديد ليتفادى التعارض
+            if (isset($data['category_id']) && (int)$data['category_id'] !== (int)$product->category_id) {
+                $maxSort = Product::where('category_id', $data['category_id'])->max('sort_order');
+                $data['sort_order'] = $maxSort !== null ? $maxSort + 1 : 1;
+            }
+
             // 3. تحديث الـ slug بذكاء (التحقق مما إذا كان الاسم الإنجليزي أو العربي قد تغير)
             $newSlugName = $request->name['en'] ?? $request->name['ar'];
 
@@ -442,18 +448,23 @@ class ProductController extends Controller
 
         DB::beginTransaction();
         try {
-            // نتحقق مما إذا كان الرقم الجديد مستخدمًا مسبقًا في نفس القسم
-            $exists = Product::where('category_id', $categoryId)
-                             ->where('id', '!=', $product->id)
-                             ->where('sort_order', $newSortOrder)
-                             ->exists();
+            $oldSortOrder = (int)$oldSortOrder;
+            $newSortOrder = (int)$newSortOrder;
 
-            if ($exists) {
-                // دفع جميع المنتجات التي ترتيبها >= الرقم الجديد بزيادة 1
+            if ($newSortOrder < $oldSortOrder) {
+                // Moving up: Shift intermediate items down (increment)
                 Product::where('category_id', $categoryId)
                        ->where('id', '!=', $product->id)
                        ->where('sort_order', '>=', $newSortOrder)
+                       ->where('sort_order', '<', $oldSortOrder)
                        ->increment('sort_order');
+            } else {
+                // Moving down: Shift intermediate items up (decrement)
+                Product::where('category_id', $categoryId)
+                       ->where('id', '!=', $product->id)
+                       ->where('sort_order', '>', $oldSortOrder)
+                       ->where('sort_order', '<=', $newSortOrder)
+                       ->decrement('sort_order');
             }
 
             $product->update(['sort_order' => $newSortOrder]);
