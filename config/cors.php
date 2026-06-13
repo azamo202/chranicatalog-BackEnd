@@ -8,6 +8,7 @@ return [
 
     'allowed_origins' => [
         'https://dashboard.chranico.com',
+        'https://www.chranico.com',
     ],
 
     'allowed_origins_patterns' => [],
