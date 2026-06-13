@@ -17,6 +17,7 @@ class ProductResource extends JsonResource
             'origin_country' => $this->getTranslations('origin_country'),
             'description' => $this->getTranslations('description'),
             'is_active' => (bool) $this->is_active,
+            'sort_order' => (int) $this->sort_order,
 
             // جلب القسم والعلامة التجارية (إذا تم تحميلهما Eager Loading)
             'category' => new CategoryResource($this->whenLoaded('category')),
