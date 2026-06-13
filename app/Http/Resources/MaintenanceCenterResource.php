@@ -21,6 +21,7 @@ class MaintenanceCenterResource extends JsonResource
             'phone' => $this->phone,
             'address' => $this->getTranslations('address'),
             'location_link' => $this->location_link,
+            'sort_order' => $this->sort_order,
         ];
     }
 }

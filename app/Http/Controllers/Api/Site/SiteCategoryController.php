@@ -20,7 +20,7 @@ class SiteCategoryController extends Controller
             ->whereNull('parent_id')
             ->orderBy('sort_order', 'asc')
             ->with(['children' => function ($query) {
-                $query->where('is_active', true)->orderBy('sort_order', 'asc');
+                $query->where('is_active', true);
             }])
             ->get();
 

@@ -19,6 +19,7 @@ class SupportVideoResource extends JsonResource
             'title' => $this->getTranslations('title'),
             'youtube_id' => $this->youtube_id,
             'youtube_url' => $this->youtube_url,
+            'sort_order' => $this->sort_order,
         ];
     }
 }

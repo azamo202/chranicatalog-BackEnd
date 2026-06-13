@@ -18,9 +18,7 @@ class CategoryController extends Controller
         // جلب الأقسام الرئيسية فقط، مع تحميل الأقسام الفرعية التابعة لها
         $categories = Category::whereNull('parent_id')
             ->orderBy('sort_order', 'asc')
-            ->with(['children' => function ($query) {
-                $query->orderBy('sort_order', 'asc');
-            }])
+            ->with('children')
             ->get();
 
         return response()->json([
@@ -45,6 +43,9 @@ class CategoryController extends Controller
         ]);
 
         $data = $request->only(['name', 'parent_id', 'is_active', 'sort_order']);
+        if (!empty($data['parent_id'])) {
+            $data['sort_order'] = 0;
+        }
 
         $slugName = $request->name['en'] ?? $request->name['ar'];
         $data['slug'] = Str::slug($slugName);
@@ -92,6 +93,9 @@ class CategoryController extends Controller
         ]);
 
         $data = $request->only(['name', 'parent_id', 'is_active', 'sort_order']);
+        if (!empty($data['parent_id'])) {
+            $data['sort_order'] = 0;
+        }
 
         $slugName = $request->name['en'] ?? $request->name['ar'];
         $data['slug'] = Str::slug($slugName);

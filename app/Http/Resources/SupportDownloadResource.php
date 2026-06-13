@@ -18,6 +18,7 @@ class SupportDownloadResource extends JsonResource
             'id' => $this->id,
             'title' => $this->getTranslations('title'),
             'file_url' => asset('storage/' . $this->pdf_file_path),
+            'sort_order' => $this->sort_order,
         ];
     }
 }

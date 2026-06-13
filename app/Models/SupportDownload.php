@@ -9,6 +9,6 @@ class SupportDownload extends Model
 {
     use HasTranslations;
 
-    protected $fillable = ['title', 'file_path', 'is_active', 'sort_order'];
+    protected $fillable = ['title', 'pdf_file_path', 'is_active', 'sort_order'];
     public $translatable = ['title'];
 }
