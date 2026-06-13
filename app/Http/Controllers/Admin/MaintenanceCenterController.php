@@ -12,7 +12,7 @@ class MaintenanceCenterController extends Controller
     public function index(Request $request)
     {
         // 1. بدء الاستعلام
-        $query = MaintenanceCenter::query();
+        $query = MaintenanceCenter::query()->orderBy('sort_order', 'asc');
 
         // 2. الفلترة العامة (البحث الشامل في الاسم، العنوان بجميع اللغات، أو رقم الهاتف)
         if ($request->filled('search')) {
@@ -58,6 +58,7 @@ class MaintenanceCenterController extends Controller
             'address.en' => 'nullable|string',
             'address.ku' => 'nullable|string',
             'location_link' => 'nullable|url',
+            'sort_order' => 'nullable|integer',
         ]);
 
         $center = MaintenanceCenter::create($request->all());
@@ -87,6 +88,7 @@ class MaintenanceCenterController extends Controller
             'address.ku' => 'nullable|string',
 
             'location_link' => 'nullable|url',
+            'sort_order' => 'nullable|integer',
         ]);
         $center->update($request->all());
         return response()->json(['status' => true, 'message' => 'تم تحديث بيانات المركز بنجاح', 'data' => new MaintenanceCenterResource($center)]);

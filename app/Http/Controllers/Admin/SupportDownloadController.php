@@ -13,7 +13,7 @@ class SupportDownloadController extends Controller
     public function index(Request $request)
     {
         // 1. بدء الاستعلام
-        $query = SupportDownload::query();
+        $query = SupportDownload::query()->orderBy('sort_order', 'asc');
 
         // 2. الفلترة (البحث في عنوان الملف بجميع اللغات)
         if ($request->filled('search')) {
@@ -37,12 +37,14 @@ class SupportDownloadController extends Controller
             'title.en' => 'nullable|string',
             'title.ku' => 'nullable|string',
             'file' => 'required|file|mimes:pdf,jpeg,png,jpg,webp,doc,docx,xls,xlsx,zip,rar|max:10240',
+            'sort_order' => 'nullable|integer',
         ]);
 
         $path = $request->file('file')->store('support_docs', 'public');
         $download = SupportDownload::create([
             'title' => $request->title,
-            'pdf_file_path' => $path
+            'pdf_file_path' => $path,
+            'sort_order' => $request->sort_order ?? 0,
         ]);
 
         return response()->json(['status' => true, 'message' => 'تم رفع الملف بنجاح', 'data' => new SupportDownloadResource($download)], 201);
@@ -58,9 +60,13 @@ class SupportDownloadController extends Controller
             'title.en' => 'nullable|string',
             'title.ku' => 'nullable|string',
             'file' => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp,doc,docx,xls,xlsx,zip,rar|max:10240',
+            'sort_order' => 'nullable|integer',
         ]);
 
         $data = ['title' => $request->title];
+        if ($request->has('sort_order')) {
+            $data['sort_order'] = $request->sort_order;
+        }
 
         if ($request->hasFile('file')) {
             // حذف الملف القديم من التخزين

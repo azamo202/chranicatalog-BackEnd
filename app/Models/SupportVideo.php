@@ -9,7 +9,7 @@ class SupportVideo extends Model
 {
     use HasTranslations;
 
-    protected $fillable = ['title', 'youtube_id'];
+    protected $fillable = ['title', 'video_url', 'thumbnail', 'is_active', 'sort_order'];
     public $translatable = ['title'];
     protected $appends = ['youtube_url'];
 

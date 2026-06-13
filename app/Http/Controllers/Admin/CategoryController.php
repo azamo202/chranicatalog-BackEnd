@@ -16,7 +16,12 @@ class CategoryController extends Controller
     public function index()
     {
         // جلب الأقسام الرئيسية فقط، مع تحميل الأقسام الفرعية التابعة لها
-        $categories = Category::whereNull('parent_id')->with('children')->get();
+        $categories = Category::whereNull('parent_id')
+            ->orderBy('sort_order', 'asc')
+            ->with(['children' => function ($query) {
+                $query->orderBy('sort_order', 'asc');
+            }])
+            ->get();
 
         return response()->json([
             'status' => true,
@@ -36,9 +41,10 @@ class CategoryController extends Controller
             'name.ku' => 'nullable|string',
             'parent_id' => 'nullable|exists:categories,id',
             'image' => 'nullable|image|max:2048',
+            'sort_order' => 'nullable|integer',
         ]);
 
-        $data = $request->only(['name', 'parent_id', 'is_active']);
+        $data = $request->only(['name', 'parent_id', 'is_active', 'sort_order']);
 
         $slugName = $request->name['en'] ?? $request->name['ar'];
         $data['slug'] = Str::slug($slugName);
@@ -82,9 +88,10 @@ class CategoryController extends Controller
             'name.ku' => 'nullable|string',
             'parent_id' => 'nullable|exists:categories,id',
             'image' => 'nullable|image|max:2048',
+            'sort_order' => 'nullable|integer',
         ]);
 
-        $data = $request->only(['name', 'parent_id', 'is_active']);
+        $data = $request->only(['name', 'parent_id', 'is_active', 'sort_order']);
 
         $slugName = $request->name['en'] ?? $request->name['ar'];
         $data['slug'] = Str::slug($slugName);

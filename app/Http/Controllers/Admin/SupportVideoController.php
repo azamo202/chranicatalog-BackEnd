@@ -14,7 +14,7 @@ class SupportVideoController extends Controller
     public function index(Request $request)
     {
         // 1. بدء الاستعلام
-        $query = SupportVideo::query();
+        $query = SupportVideo::query()->orderBy('sort_order', 'asc');
 
         // 2. الفلترة (البحث في عنوان الفيديو بجميع اللغات)
         if ($request->filled('search')) {
@@ -38,6 +38,7 @@ class SupportVideoController extends Controller
             'title.en' => 'nullable|string',
             'title.ku' => 'nullable|string',
             'youtube_url' => ['required', 'string', new ValidYoutube],
+            'sort_order' => 'nullable|integer',
         ]);
 
         $data = $request->all();
@@ -55,6 +56,7 @@ class SupportVideoController extends Controller
             'title' => 'required|array',
             'title.ar' => 'required|string',
             'youtube_url' => ['required', 'string', new ValidYoutube],
+            'sort_order' => 'nullable|integer',
         ]);
 
         $data = $request->all();

@@ -36,7 +36,7 @@ class SiteSupportController extends Controller
             });
         }
 
-        $centers = $query->latest()->get();
+        $centers = $query->orderBy('sort_order', 'asc')->get();
         
         return response()->json([
             'status' => true,
@@ -60,7 +60,7 @@ class SiteSupportController extends Controller
             });
         }
 
-        $videos = $query->latest()->get();
+        $videos = $query->orderBy('sort_order', 'asc')->get();
         
         return response()->json([
             'status' => true,
@@ -84,7 +84,7 @@ class SiteSupportController extends Controller
             });
         }
 
-        $downloads = $query->latest()->get();
+        $downloads = $query->orderBy('sort_order', 'asc')->get();
         
         return response()->json([
             'status' => true,

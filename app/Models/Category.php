@@ -8,7 +8,7 @@ use Spatie\Translatable\HasTranslations;
 class Category extends Model
 {
     use HasTranslations; // تفعيل الحزمة
-    protected $fillable = ['parent_id', 'name', 'slug', 'image', 'is_active'];
+    protected $fillable = ['parent_id', 'name', 'slug', 'image', 'is_active', 'sort_order'];
 
     public $translatable = ['name'];
     // القسم الأب
