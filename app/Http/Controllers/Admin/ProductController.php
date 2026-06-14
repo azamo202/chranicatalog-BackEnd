@@ -83,7 +83,8 @@ class ProductController extends Controller
         }
 
         // 7. جلب البيانات مع التقسيم (Pagination)
-        $products = $query->get();
+        $perPage = $request->input('per_page', 50); // قراءة عدد العناصر في الصفحة أو استخدام 50 كافتراضي
+        $products = $query->paginate($perPage);
         return ProductResource::collection($products);
     }
     /**
