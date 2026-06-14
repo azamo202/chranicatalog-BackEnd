@@ -7,7 +7,6 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Models\Brand;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\DB;
 
 class ProductSeeder extends Seeder
 {
@@ -16,102 +15,128 @@ class ProductSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. تهيئة الأقسام (Categories)
-        // ربط الاسم العربي بـ slug إنجليزي لتجنب مشاكل الروابط
-        $categoriesData = [
-            'الثلاجات' => 'refrigerators',
-            'الأفران' => 'ovens',
-            'الشفاطات' => 'hoods'
+        // Setup a category matching the example
+        $category = Category::firstOrCreate(
+            ['slug' => 'static-cooling'],
+            ['name' => ['en' => 'Static Cooling', 'ar' => 'تبريد مباشر', 'ku' => 'دیفرۆست'], 'is_active' => 1]
+        );
+
+        // Setup a brand matching the example
+        $brand = Brand::firstOrCreate(
+            ['name' => 'iLK'],
+            ['logo' => 'brands/cBa9v24ll1pki1P7YgOb6N5uXsHKzLApLNWzHgad.webp']
+        );
+
+        $colorsEn = ['White', 'Black', 'Silver', 'Grey', 'Red'];
+        $colorsAr = ['ابيض', 'اسود', 'فضي', 'رصاصي', 'احمر'];
+        $colorsKu = ['سپی', 'ڕەش', 'زیو', 'ڕەساسی', 'سوور'];
+
+        $imagePaths = [
+            'products/yqHJNvfZehs0bvhjKkuuvtwmXDP42xWsa8ZOccc0.webp',
+            'products/AjygSTbjRAZXcZ4mWfOtDDAqD2NckiJCfXIF2HL9.webp',
+            'products/ECdam24MNwO73HOgwXiXvM6JD4euvl5x4eJCqtnw.webp',
+            'products/D16K5Dkhg1LeiB6p1AooWvOb3KKmzvnbLh3Y0uRw.webp',
+            'products/YOgE1EQQAKrebXPW5AbEN7ukLNZoyj5wUjFpT7Jb.webp',
+            'products/yK1jLeKX5iVmzdac5HBEFJdn6tcjOQy7o7xDddE1.webp',
+            'products/vSl6jziPeGASCLCuqpsQ4ifln09IjBE8faNa2D2t.webp',
+            'products/qIMpss1z1rIGdWnUrN2TlsHi2m4S8Z1JcyHAuqpQ.webp',
+            'products/WIFbsEM85ZdpOZz2ICJoscQMitbscLTvIsvz9nWg.webp'
         ];
 
-        $categories = [];
-        foreach ($categoriesData as $catName => $slug) {
-            $categories[$catName] = Category::firstOrCreate(
-                ['slug' => $slug], // البحث عن طريق السلاج لتجنب التكرار
-                ['name' => $catName] // إنشاء الاسم في حال عدم الوجود
-            );
-        }
+        for ($i = 0; $i < 50; $i++) {
+            $colorIndex = array_rand($colorsEn);
+            $capacity = rand(200, 800);
+            
+            $nameEn = "iLK Refrigerator {$capacity} Liters " . $colorsEn[$colorIndex];
+            $nameAr = "ثلاجة iLK سعة {$capacity} لتر " . $colorsAr[$colorIndex];
+            $nameKu = "سەلاجەی iLK قەبارە {$capacity} لیتر " . $colorsKu[$colorIndex];
 
-        // 2. تهيئة العلامات التجارية (Brands)
-        // الاعتماد على الاسم فقط بما أن جدول brands لا يحتوي على حقل slug
-        $brandsData = ['ALPA', 'ALFA', 'MOLINEX'];
-        $brands = [];
-        foreach ($brandsData as $brandName) {
-            $brands[$brandName] = Brand::firstOrCreate(
-                ['name' => $brandName], // البحث عن طريق الاسم لمنع التكرار
-                ['logo' => null]        // إنشاء الحقول المتبقية في حال عدم الوجود
-            );
-        }
+            $slug = Str::slug($nameEn . '-' . Str::random(5));
+            $modelNumber = 'iLKR-' . strtoupper(Str::random(2)) . $capacity . 'GL';
 
-        // 3. قوالب بيانات المنتجات باللغات الثلاث
-        $productTemplates = [
-            'الثلاجات' => [
-                ['en' => 'Side by Side Refrigerator 600L', 'ar' => 'ثلاجة بابين جنباً إلى جنب 600 لتر', 'ku' => 'ساردکەرەوەی دوو دەرگا 600 لیتر'],
-                ['en' => 'Top Mount Refrigerator 450L', 'ar' => 'ثلاجة بفريزر علوي 450 لتر', 'ku' => 'ساردکەرەوەی بەشی سەرەوە 450 لیتر'],
-                ['en' => 'Bottom Freezer Refrigerator 320L', 'ar' => 'ثلاجة بفريزر سفلي 320 لتر', 'ku' => 'ساردکەرەوەی بەشی خوارەوە 320 لیتر'],
-                ['en' => 'Mini Bar Refrigerator 90L', 'ar' => 'ثلاجة ميني بار 90 لتر', 'ku' => 'ساردکەرەوەی مینی بار 90 لیتر'],
-                ['en' => 'French Door Refrigerator 700L', 'ar' => 'ثلاجة باب فرنسي 700 لتر', 'ku' => 'ساردکەرەوەی دەرگای فەرەنسی 700 لیتر'],
-            ],
-            'الأفران' => [
-                ['en' => 'Freestanding Gas Oven 5 Burners', 'ar' => 'فرن غاز قائم بذاته 5 شعلات', 'ku' => 'فڕنی غازی سەربەخۆ 5 چاو'],
-                ['en' => 'Built-in Electric Oven 60cm', 'ar' => 'فرن كهربائي مدمج 60 سم', 'ku' => 'فڕنی کارەبایی ناوەکی 60 سم'],
-                ['en' => 'Gas Oven with Grill 90cm', 'ar' => 'فرن غاز مع شواية 90 سم', 'ku' => 'فڕنی غاز لەگەڵ برژێنەر 90 سم'],
-                ['en' => 'Multifunction Electric Oven 70L', 'ar' => 'فرن كهربائي متعدد الوظائف 70 لتر', 'ku' => 'فڕنی کارەبایی فرە کردار 70 لیتر'],
-                ['en' => 'Compact Microwave Oven 45cm', 'ar' => 'فرن ميكروويف مدمج 45 سم', 'ku' => 'فڕنی مایکرۆوەیڤی بچووک 45 سم'],
-            ],
-            'الشفاطات' => [
-                ['en' => 'Wall Mount Chimney Hood 90cm', 'ar' => 'شفاط مطبخ جداري 90 سم', 'ku' => 'هەواکێشی چێشتخانەی دیوار 90 سم'],
-                ['en' => 'Built-in Cooker Hood 60cm', 'ar' => 'شفاط مدمج 60 سم', 'ku' => 'هەواکێشی ناوەکی 60 سم'],
-                ['en' => 'Island Cooker Hood 90cm', 'ar' => 'شفاط جزيرة معلق 90 سم', 'ku' => 'هەواکێشی دوورگەیی 90 سم'],
-                ['en' => 'Telescopic Range Hood 60cm', 'ar' => 'شفاط تلسكوبي قابل للسحب 60 سم', 'ku' => 'هەواکێشی تەلەسکۆپی 60 سم'],
-                ['en' => 'Decorative Glass Hood 90cm', 'ar' => 'شفاط ديكوري بزجاج مقوى 90 سم', 'ku' => 'هەواکێشی شوشەی دیکۆری 90 سم'],
-            ]
-        ];
+            $product = Product::create([
+                'category_id' => $category->id,
+                'brand_id' => $brand->id,
+                'name' => [
+                    'ar' => $nameAr,
+                    'en' => $nameEn,
+                    'ku' => $nameKu
+                ],
+                'slug' => $slug,
+                'model_number' => $modelNumber,
+                'origin_country' => [
+                    'ar' => 'تركيا',
+                    'en' => 'Turkey',
+                    'ku' => 'تورکیا'
+                ],
+                'description' => [
+                    'ar' => "ثلاجة iLK تركية الصنع سعة {$capacity} لتر تبريد مباشر\r\n- تبريد مباشر: للحفاظ على جودة وطراوة الأطعمة بفعالية.\r\n- مروحة هواء لتوزيع التبريد: توزيع مثالي ومتساوٍ للهواء البارد في كافة الأرفف.",
+                    'en' => "iLK Refrigerator, Turkish Made, Capacity {$capacity}Liters Direct Cooling\r\n- Direct Cooling: Efficiently preserves food quality and freshness.\r\n- Cooling Distribution Air Fan: Perfect and even distribution of cold air across all shelves.",
+                    'ku' => "سەلاجەی تورکی iLK قەبارە {$capacity} لیتر - ساردکردنەوەی ڕاستەوخۆ (دایرێکت کۆڵینگ)\r\n- ساردکردنەوەی ڕاستەوخۆ: بۆ پاراستنی کوالێتی و تازەیی خۆراک بە شێوازێکی کاریگەر."
+                ],
+                'is_active' => 1,
+                'sort_order' => $i + 1,
+            ]);
 
-        $origins = ['Turkey', 'Italy', 'Germany', 'China', 'Egypt'];
-
-        $descriptions = [
-            'en' => 'High quality product with excellent performance, modern design, and energy efficiency to meet all your daily needs.',
-            'ar' => 'منتج عالي الجودة بأداء ممتاز وتصميم عصري، موفر للطاقة لتلبية كافة احتياجاتك اليومية بكفاءة عالية.',
-            'ku' => 'بەرهەمێکی کوالێتی بەرزە بە کارکردنێکی نایاب و دیزاینێکی مۆدێرن، وزە دەپارێزێت بۆ پڕکردنەوەی هەموو پێداویستییە ڕۆژانەکانت.'
-        ];
-
-        // تعطيل قيود المفاتيح الأجنبية لتجنب الأخطاء أثناء الإدراج إن أردت عمل Truncate مستقبلاً
-        // DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-
-        // 4. توليد 60 منتجاً (20 لكل قسم)
-        foreach ($productTemplates as $categoryName => $templates) {
-            $categoryId = $categories[$categoryName]->id;
-
-            for ($i = 0; $i < 20; $i++) {
-                // اختيار قالب عشوائي من القسم الحالي
-                $template = $templates[array_rand($templates)];
-
-                // توليد بيانات فريدة للمنتج
-                $modelNumber = strtoupper(Str::random(3)) . '-' . rand(1000, 9999);
-                $brand = $brands[$brandsData[array_rand($brandsData)]];
-                $origin = $origins[array_rand($origins)];
-
-                // السلاج يجب أن يكون فريداً لتجنب مشاكل Unique Constraint
-                $slug = Str::slug($template['en'] . '-' . $modelNumber);
-
-                Product::create([
-                    'category_id' => $categoryId,
-                    'brand_id' => $brand->id,
-                    'name' => [
-                        'en' => $template['en'],
-                        'ar' => $template['ar'],
-                        'ku' => $template['ku'],
-                    ],
-                    'slug' => $slug,
-                    'model_number' => $modelNumber,
-                    'origin_country' => $origin,
-                    'description' => $descriptions, // تم توحيد الوصف ليكون احترافي ومناسب للجميع
-                    'is_active' => true,
+            // Add Images
+            shuffle($imagePaths);
+            $imagesCount = rand(3, 6);
+            for ($j = 0; $j < $imagesCount; $j++) {
+                $product->images()->create([
+                    'image_path' => $imagePaths[$j],
+                    'is_primary' => $j === 0 ? 1 : 0,
+                    'sort_order' => $j + 1,
                 ]);
             }
-        }
 
-        // DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+            // Add Specifications
+            $product->specifications()->createMany([
+                [
+                    'group_name' => ['ar' => 'السعة', 'en' => 'Capacity', 'ku' => 'قەبارە'],
+                    'spec_key' => ['ar' => 'لتر', 'en' => 'Liters', 'ku' => 'لیتر'],
+                    'spec_value' => ['ar' => (string)$capacity, 'en' => (string)$capacity, 'ku' => (string)$capacity],
+                ],
+                [
+                    'group_name' => ['ar' => 'الأبعاد', 'en' => 'Dimensions', 'ku' => 'ڕەهەندەکان'],
+                    'spec_key' => ['ar' => 'العرض', 'en' => 'Width', 'ku' => 'پانی'],
+                    'spec_value' => ['ar' => '70 سم', 'en' => '70 cm', 'ku' => '70 سم'],
+                ],
+                [
+                    'group_name' => ['ar' => 'الأبعاد', 'en' => 'Dimensions', 'ku' => 'ڕەهەندەکان'],
+                    'spec_key' => ['ar' => 'الأرتفاع', 'en' => 'Height', 'ku' => 'بەرزی'],
+                    'spec_value' => ['ar' => '183 سم', 'en' => '183 cm', 'ku' => '183 سم'],
+                ],
+                [
+                    'group_name' => ['ar' => 'الأبعاد', 'en' => 'Dimensions', 'ku' => 'ڕەهەندەکان'],
+                    'spec_key' => ['ar' => 'العمق', 'en' => 'Depth', 'ku' => 'قووڵی'],
+                    'spec_value' => ['ar' => '73.5 سم', 'en' => '73.5 cm', 'ku' => '73.5 سم'],
+                ],
+                [
+                    'group_name' => ['ar' => 'حمولة الحاوية', 'en' => 'Container Load', 'ku' => 'بارستایی کۆنتینەر'],
+                    'spec_key' => ['ar' => 'قطعة', 'en' => 'Pieces', 'ku' => 'دانە'],
+                    'spec_value' => ['ar' => '72', 'en' => '72', 'ku' => '72'],
+                ]
+            ]);
+
+            // Add Features
+            $product->features()->createMany([
+                [
+                    'feature_text' => ['ar' => 'تبريد مباشر', 'en' => 'Direct Cooling', 'ku' => 'ساردکردنەوەی ڕاستەوخۆ (دایرێکت کۆڵینگ)'],
+                    'sort_order' => 1
+                ],
+                [
+                    'feature_text' => ['ar' => 'مكثف خارجي', 'en' => 'External Condenser', 'ku' => 'چڕکەرەوەی دەرەکی (کۆندێنسەری دەرەکی)'],
+                    'sort_order' => 2
+                ],
+                [
+                    'feature_text' => ['ar' => 'اضاءة داخلية', 'en' => 'Interior Lighting', 'ku' => 'ڕووناکی ناوخۆیی (گڵۆپی ناوەوە)'],
+                    'sort_order' => 3
+                ],
+                [
+                    'feature_text' => ['ar' => 'مجرات قابلة لتعيير الرطوبة', 'en' => 'Humidity-Controlled Crisper Drawers', 'ku' => 'چەکمەجەی کۆنتڕۆڵکردنی شێ (شێ ڕێکخراو)'],
+                    'sort_order' => 4
+                ]
+            ]);
+        }
     }
 }
