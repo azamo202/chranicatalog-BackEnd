@@ -36,7 +36,7 @@ class SupportDownloadController extends Controller
             'title.ar' => 'required|string',
             'title.en' => 'nullable|string',
             'title.ku' => 'nullable|string',
-            'file' => 'required|file|mimes:pdf,jpeg,png,jpg,webp,doc,docx,xls,xlsx,zip,rar|max:10240',
+            'file' => 'required|file|mimes:pdf,jpeg,png,jpg,webp,doc,docx,xls,xlsx,zip,rar|max:51200',
             'sort_order' => 'nullable|integer',
         ]);
 
@@ -61,7 +61,7 @@ class SupportDownloadController extends Controller
             'title.ar' => 'required|string',
             'title.en' => 'nullable|string',
             'title.ku' => 'nullable|string',
-            'file' => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp,doc,docx,xls,xlsx,zip,rar|max:10240',
+            'file' => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp,doc,docx,xls,xlsx,zip,rar|max:51200',
             'sort_order' => 'nullable|integer',
         ]);
 
