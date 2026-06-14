@@ -439,35 +439,44 @@ class ProductController extends Controller
         ]);
 
         $product = Product::findOrFail($id);
-        $newSortOrder = $request->sort_order;
+        $newSortOrder = (int)$request->sort_order;
         $categoryId = $product->category_id;
-        $oldSortOrder = $product->sort_order;
+        $oldSortOrder = (int)$product->sort_order;
 
-        if ((int)$oldSortOrder === (int)$newSortOrder) {
+        if ($oldSortOrder === $newSortOrder) {
             return response()->json(['status' => true, 'message' => 'لم يتم تغيير الترتيب']);
         }
 
         DB::beginTransaction();
         try {
-            $oldSortOrder = (int)$oldSortOrder;
-            $newSortOrder = (int)$newSortOrder;
+            // نجلب جميع المنتجات الأخرى في نفس القسم مرتبة
+            $otherProducts = Product::where('category_id', $categoryId)
+                                   ->where('id', '!=', $product->id)
+                                   ->orderBy('sort_order', 'asc')
+                                   ->orderBy('id', 'asc')
+                                   ->get();
 
-            if ($newSortOrder < $oldSortOrder) {
-                // Moving up: Shift intermediate items down (increment)
-                Product::where('category_id', $categoryId)
-                       ->where('id', '!=', $product->id)
-                       ->where('sort_order', '>=', $newSortOrder)
-                       ->where('sort_order', '<', $oldSortOrder)
-                       ->increment('sort_order');
-            } else {
-                // Moving down: Shift intermediate items up (decrement)
-                Product::where('category_id', $categoryId)
-                       ->where('id', '!=', $product->id)
-                       ->where('sort_order', '>', $oldSortOrder)
-                       ->where('sort_order', '<=', $newSortOrder)
-                       ->decrement('sort_order');
+            // ضمان عدم إدخال رقم أكبر من الحد الأقصى للمنتجات لتفادي الفراغات
+            $maxPossible = $otherProducts->count() + 1;
+            if ($newSortOrder > $maxPossible) {
+                $newSortOrder = $maxPossible;
             }
 
+            $counter = 1;
+            foreach ($otherProducts as $p) {
+                // إذا وصلنا للمكان المطلوب للمنتج الهدف، نترك هذه الخانة فارغة ونزيد العداد
+                if ($counter === $newSortOrder) {
+                    $counter++;
+                }
+                
+                // تحديث ترتيب المنتجات الأخرى
+                if ($p->sort_order !== $counter) {
+                    $p->update(['sort_order' => $counter]);
+                }
+                $counter++;
+            }
+
+            // أخيراً نقوم بإعطاء المنتج الهدف رقمه الجديد
             $product->update(['sort_order' => $newSortOrder]);
 
             DB::commit();
