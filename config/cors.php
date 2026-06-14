@@ -8,6 +8,7 @@ return [
 
     'allowed_origins' => [
         'https://dashboard.chranico.com',
+        'https://chranico.com',
         'https://www.chranico.com',
         'http://localhost:3000',
         
