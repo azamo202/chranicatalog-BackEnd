@@ -9,6 +9,8 @@ return [
     'allowed_origins' => [
         'https://dashboard.chranico.com',
         'https://www.chranico.com',
+        'http://localhost:3000',
+        
     ],
 
     'allowed_origins_patterns' => [],
