@@ -35,9 +35,17 @@ class ProductController extends Controller
         }
         
         if ($request->filled('category_id')) {
-            // نجلب المنتجات الخاصة بهذا القسم تحديداً، دون جلب منتجات الأقسام الفرعية
-            // لضمان عدم تداخل قيم الترتيب (sort_order) في واجهة لوحة التحكم
-            $query->where('category_id', $request->category_id);
+            $categoryId = $request->category_id;
+            
+            // جلب معرف القسم الحالي مع جميع معرفات الأقسام الفرعية التابعة له
+            $categoryIds = \App\Models\Category::where('id', $categoryId)
+                ->get()
+                ->flatMap(function($category) {
+                    return [$category->id, ...$category->children()->pluck('id')->toArray()];
+                })
+                ->unique();
+                
+            $query->whereIn('category_id', $categoryIds);
         }
 
         // 3. الفلترة حسب الماركة (Brand)
@@ -70,9 +78,10 @@ class ProductController extends Controller
             $query->where('is_active', $request->boolean('is_active'));
         }
 
-        // 6. الترتيب (الترتيب حسب القسم إن وجد، وإلا الأحدث)
+        // 6. الترتيب (ترتيب حسب القسم أولاً لتجميع منتجات كل قسم، ثم الترتيب الداخلي)
         if ($request->filled('category_slug') || $request->filled('category_id')) {
-            $query->orderBy('sort_order', 'asc')->latest();
+            // التجميع بـ category_id يمنع تداخل الأرقام من أقسام مختلفة في الجدول
+            $query->orderBy('category_id', 'asc')->orderBy('sort_order', 'asc')->latest();
         } else {
             $query->latest();
         }
