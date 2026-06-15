@@ -166,17 +166,26 @@ class CategoryController extends Controller
         return $newOrder;
     }
     /**
-     * حذف القسم
+     * حذف القسم مع إعادة ترتيب العناصر المتبقية
      */
     public function destroy($id)
     {
         $category = Category::findOrFail($id);
+        $deletedOrder = (int) $category->sort_order;
+        $parentId     = $category->parent_id;
 
         // عند استخدام cascade في الـ migration سيتم حذف الأقسام الفرعية تلقائياً
         $category->delete();
 
+        // إعادة ترتيب العناصر التي كانت بعد العنصر المحذوف (تسلسل بلا فراغات)
+        if ($parentId === null && $deletedOrder > 0) {
+            Category::whereNull('parent_id')
+                ->where('sort_order', '>', $deletedOrder)
+                ->decrement('sort_order');
+        }
+
         return response()->json([
-            'status' => true,
+            'status'  => true,
             'message' => 'تم حذف القسم بنجاح'
         ], 200);
     }

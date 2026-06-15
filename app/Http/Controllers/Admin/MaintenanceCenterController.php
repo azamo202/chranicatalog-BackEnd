@@ -151,7 +151,17 @@ class MaintenanceCenterController extends Controller
 
     public function destroy($id)
     {
-        MaintenanceCenter::findOrFail($id)->delete();
+        $center = MaintenanceCenter::findOrFail($id);
+        $deletedOrder = (int) $center->sort_order;
+
+        $center->delete();
+
+        // إعادة ترتيب العناصر التي كانت بعد العنصر المحذوف (تسلسل بلا فراغات)
+        if ($deletedOrder > 0) {
+            MaintenanceCenter::where('sort_order', '>', $deletedOrder)
+                ->decrement('sort_order');
+        }
+
         return response()->json(['status' => true, 'message' => 'تم حذف المركز بنجاح']);
     }
 }

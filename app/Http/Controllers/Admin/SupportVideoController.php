@@ -119,7 +119,17 @@ class SupportVideoController extends Controller
 
     public function destroy($id)
     {
-        SupportVideo::findOrFail($id)->delete();
+        $video = SupportVideo::findOrFail($id);
+        $deletedOrder = (int) $video->sort_order;
+
+        $video->delete();
+
+        // إعادة ترتيب العناصر التي كانت بعد العنصر المحذوف (تسلسل بلا فراغات)
+        if ($deletedOrder > 0) {
+            SupportVideo::where('sort_order', '>', $deletedOrder)
+                ->decrement('sort_order');
+        }
+
         return response()->json(['status' => true, 'message' => 'تم حذف الفيديو بنجاح']);
     }
 }

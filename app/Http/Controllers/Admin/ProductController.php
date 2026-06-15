@@ -320,16 +320,25 @@ class ProductController extends Controller
     }
 
     /**
-     * حذف المنتج (للوحة التحكم)
+     * حذف المنتج مع إعادة ترتيب المنتجات المتبقية في نفس القسم
      */
     public function destroy($id)
     {
         $product = Product::findOrFail($id);
+        $deletedOrder = (int) $product->sort_order;
+        $categoryId   = $product->category_id;
 
         $product->delete();
 
+        // إعادة ترتيب المنتجات التي كانت بعد المنتج المحذوف (تسلسل بلا فراغات)
+        if ($deletedOrder > 0) {
+            Product::where('category_id', $categoryId)
+                ->where('sort_order', '>', $deletedOrder)
+                ->decrement('sort_order');
+        }
+
         return response()->json([
-            'status' => true,
+            'status'  => true,
             'message' => 'تم حذف المنتج بنجاح'
         ]);
     }

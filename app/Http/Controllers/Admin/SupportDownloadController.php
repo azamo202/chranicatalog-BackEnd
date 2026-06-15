@@ -132,8 +132,17 @@ class SupportDownloadController extends Controller
     public function destroy($id)
     {
         $download = SupportDownload::findOrFail($id);
+        $deletedOrder = (int) $download->sort_order;
+
         Storage::disk('public')->delete($download->pdf_file_path);
         $download->delete();
+
+        // إعادة ترتيب العناصر التي كانت بعد العنصر المحذوف (تسلسل بلا فراغات)
+        if ($deletedOrder > 0) {
+            SupportDownload::where('sort_order', '>', $deletedOrder)
+                ->decrement('sort_order');
+        }
+
         return response()->json(['status' => true, 'message' => 'تم حذف الملف بنجاح']);
     }
 }
