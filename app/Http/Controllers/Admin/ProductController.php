@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\Admin; // تأكد أن المسار Api وليس Admin إذا كنت تضعه في مجلد Api
+namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Http\Resources\ProductResource;
+use App\Traits\ManagesSortOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,8 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
+    use ManagesSortOrder;
+
     /**
      * عرض قائمة المنتجات للواجهة (مع فلترة متقدمة وبحث)
      */
@@ -141,26 +144,28 @@ class ProductController extends Controller
         DB::beginTransaction();
 
         try {
-            // توليد الـ Slug بناءً على الإنجليزي أو العربي
             $slugName = $request->name['en'] ?? $request->name['ar'];
 
-            // 2. إنشاء المنتج الأساسي
-            $sortOrder = Product::where('category_id', $request->category_id)->max('sort_order');
-            $sortOrder = $sortOrder !== null ? $sortOrder + 1 : 1;
+            // احسب الترتيب بأمان داخل نفس الـ transaction مع قفل الصفوف
+            $sortOrder = $this->adjustSortOrder(
+                null,
+                null, // منتج جديد → دائماً في آخر مكان
+                Product::where('category_id', $request->category_id)
+            );
 
             $product = Product::create([
-                'name' => $request->name, // لارافل ستحفظ المصفوفة كـ JSON تلقائياً بفضل الحزمة
-                'slug' => Str::slug($slugName) . '-' . uniqid(),
-                'category_id' => $request->category_id,
-                'brand_id' => $request->brand_id,
-                'model_number' => $request->model_number,
+                'name'           => $request->name,
+                'slug'           => Str::slug($slugName) . '-' . uniqid(),
+                'category_id'    => $request->category_id,
+                'brand_id'       => $request->brand_id,
+                'model_number'   => $request->model_number,
                 'origin_country' => $request->origin_country,
-                'description' => $request->description,
-                'is_active' => $request->is_active ?? true,
-                'sort_order' => $sortOrder,
+                'description'    => $request->description,
+                'is_active'      => $request->is_active ?? true,
+                'sort_order'     => $sortOrder,
             ]);
 
-            // 3. معالجة الصور
+            // معالجة الصور
             $primaryIndex = $request->input('primary_image_index', 0);
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $index => $image) {
@@ -173,7 +178,7 @@ class ProductController extends Controller
                 }
             }
 
-            // 4. إضافة المواصفات (ستستقبل اللغات كـ JSON)
+            // إضافة المواصفات
             if ($request->has('specifications')) {
                 $specs = json_decode($request->specifications, true);
                 if (is_array($specs)) {
@@ -181,7 +186,7 @@ class ProductController extends Controller
                 }
             }
 
-            // 5. إضافة المميزات النقطية
+            // إضافة المميزات النقطية
             if ($request->has('features')) {
                 $features = json_decode($request->features, true);
                 if (is_array($features)) {
@@ -192,7 +197,7 @@ class ProductController extends Controller
             DB::commit();
 
             return response()->json([
-                'status' => true,
+                'status'  => true,
                 'message' => 'تم حفظ المنتج بنجاح',
             ], 201);
         } catch (\Exception $e) {
@@ -324,22 +329,22 @@ class ProductController extends Controller
      */
     public function destroy($id)
     {
-        $product = Product::findOrFail($id);
-        $deletedOrder = (int) $product->sort_order;
-        $categoryId   = $product->category_id;
+        DB::transaction(function () use ($id) {
+            $product      = Product::findOrFail($id);
+            $deletedOrder = (int) $product->sort_order;
+            $categoryId   = $product->category_id;
 
-        $product->delete();
+            $product->delete();
 
-        // إعادة ترتيب المنتجات التي كانت بعد المنتج المحذوف (تسلسل بلا فراغات)
-        if ($deletedOrder > 0) {
-            Product::where('category_id', $categoryId)
-                ->where('sort_order', '>', $deletedOrder)
-                ->decrement('sort_order');
-        }
+            $this->reorderAfterDelete(
+                Product::where('category_id', $categoryId),
+                $deletedOrder
+            );
+        });
 
         return response()->json([
             'status'  => true,
-            'message' => 'تم حذف المنتج بنجاح'
+            'message' => 'تم حذف المنتج بنجاح',
         ]);
     }
 
@@ -439,7 +444,7 @@ class ProductController extends Controller
     }
 
     /**
-     * تحديث ترتيب المنتج وإعادة ترتيب المنتجات الأخرى إذا لزم الأمر
+     * تحديث ترتيب المنتج باستخدام Trait المركزية (آمن ضد التزامن)
      */
     public function updateSortOrder(Request $request, $id)
     {
@@ -447,85 +452,42 @@ class ProductController extends Controller
             'sort_order' => 'required|integer|min:1'
         ]);
 
-        $product = Product::findOrFail($id);
-        $newSortOrder = (int)$request->sort_order;
-        $categoryId = $product->category_id;
-        $oldSortOrder = (int)$product->sort_order;
-
-        if ($oldSortOrder === $newSortOrder) {
-            return response()->json(['status' => true, 'message' => 'لم يتم تغيير الترتيب']);
-        }
-
-        DB::beginTransaction();
         try {
-            // نجلب جميع المنتجات الأخرى في نفس القسم مرتبة
-            $otherProducts = Product::where('category_id', $categoryId)
-                                   ->where('id', '!=', $product->id)
-                                   ->orderBy('sort_order', 'asc')
-                                   ->orderBy('id', 'asc')
-                                   ->get();
+            DB::transaction(function () use ($request, $id) {
+                $product    = Product::findOrFail($id);
+                $newOrder   = $this->adjustSortOrder(
+                    $product->id,
+                    (int)$request->sort_order,
+                    Product::where('category_id', $product->category_id)
+                );
 
-            // ضمان عدم إدخال رقم أكبر من الحد الأقصى للمنتجات لتفادي الفراغات
-            $maxPossible = $otherProducts->count() + 1;
-            if ($newSortOrder > $maxPossible) {
-                $newSortOrder = $maxPossible;
-            }
+                $product->update(['sort_order' => $newOrder]);
+            });
 
-            $counter = 1;
-            foreach ($otherProducts as $p) {
-                // إذا وصلنا للمكان المطلوب للمنتج الهدف، نترك هذه الخانة فارغة ونزيد العداد
-                if ($counter === $newSortOrder) {
-                    $counter++;
-                }
-                
-                // تحديث ترتيب المنتجات الأخرى
-                if ($p->sort_order !== $counter) {
-                    $p->update(['sort_order' => $counter]);
-                }
-                $counter++;
-            }
-
-            // أخيراً نقوم بإعطاء المنتج الهدف رقمه الجديد
-            $product->update(['sort_order' => $newSortOrder]);
-
-            DB::commit();
             return response()->json([
-                'status' => true,
-                'message' => 'تم تحديث الترتيب بنجاح'
+                'status'  => true,
+                'message' => 'تم تحديث الترتيب بنجاح',
             ]);
         } catch (\Exception $e) {
-            DB::rollBack();
             return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
     /**
-     * إعادة الترتيب التلقائي بشكل متسلسل
+     * إصلاح الترتيب الكامل لمنتجات قسم معين (يُعالج البيانات التالفة مثل التكرار)
      */
     public function autoReorderCategoryProducts($categoryId)
     {
-        DB::beginTransaction();
         try {
-            $products = Product::where('category_id', $categoryId)
-                               ->orderBy('sort_order', 'asc')
-                               ->orderBy('id', 'asc')
-                               ->get();
+            $this->normalizeOrder(
+                Product::where('category_id', $categoryId)
+            );
 
-            $counter = 1;
-            foreach ($products as $product) {
-                if ($product->sort_order !== $counter) {
-                    $product->update(['sort_order' => $counter]);
-                }
-                $counter++;
-            }
-
-            DB::commit();
             return response()->json([
-                'status' => true,
-                'message' => 'تم إعادة الترتيب التلقائي بنجاح'
+                'status'  => true,
+                'message' => 'تم إعادة الترتيب التلقائي بنجاح',
             ]);
         } catch (\Exception $e) {
-            DB::rollBack();
             return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
         }
     }

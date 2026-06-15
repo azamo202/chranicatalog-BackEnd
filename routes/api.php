@@ -94,18 +94,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/admin/users/{id}', [AdminController::class, 'destroy'])->middleware(CheckSuperAdmin::class);
 
 
-    // مسارات إدارة الأقسام (إضافة، تعديل، حذف)
+    // مسارات إدارة الأقسام (إضافة، تعديل، حذف، إصلاح الترتيب)
     Route::post('/categories', [CategoryController::class, 'store']);
-    // نستخدم POST مع تمرير _method=PUT في الـ FormData لدعم رفع الملفات في Laravel
     Route::post('/categories/{id}', [CategoryController::class, 'update']);
     Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
+    Route::post('/categories/normalize', [CategoryController::class, 'normalize']);
+
+    // مسارات إدارة المنتجات
     Route::post('/products', [ProductController::class, 'store']);
-    Route::delete('/products/{id}', [ProductController::class, 'destroy']);
-    Route::post('/products', [ProductController::class, 'store']);
-    // نستخدم POST مع تمرير _method=PUT في الـ FormData لدعم رفع الصور
     Route::post('/products/{id}', [ProductController::class, 'update']);
     Route::delete('/products/{id}', [ProductController::class, 'destroy']);
-    
+
     // إدارة صور المنتجات
     Route::post('/products/images/{id}/set-primary', [ProductController::class, 'setPrimaryImage']);
     Route::delete('/products/images/{id}', [ProductController::class, 'deleteImage']);
@@ -117,21 +116,27 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // مسارات إدارة العلامات التجارية
     Route::post('/brands', [BrandController::class, 'store']);
-    // تذكر: عند التعديل ورفع صورة من الواجهة نستخدم POST مع _method=PUT
     Route::post('/brands/{id}', [BrandController::class, 'update']);
     Route::delete('/brands/{id}', [BrandController::class, 'destroy']);
+
+    // مسارات مراكز الصيانة (إضافة، تعديل، حذف، إصلاح الترتيب)
     Route::post('/maintenance-centers', [MaintenanceCenterController::class, 'store']);
     Route::put('/maintenance-centers/{id}', [MaintenanceCenterController::class, 'update']);
     Route::delete('/maintenance-centers/{id}', [MaintenanceCenterController::class, 'destroy']);
+    Route::post('/maintenance-centers/normalize', [MaintenanceCenterController::class, 'normalize']);
 
-    Route::post('/support-videos', [SupportVideoController::class, 'store']);
+    // مسارات فيديوهات الدعم (إضافة، تعديل، حذف، إصلاح الترتيب)
     Route::post('/support-videos', [SupportVideoController::class, 'store']);
     Route::put('/support-videos/{id}', [SupportVideoController::class, 'update']);
     Route::delete('/support-videos/{id}', [SupportVideoController::class, 'destroy']);
+    Route::post('/support-videos/normalize', [SupportVideoController::class, 'normalize']);
 
+    // مسارات ملفات الدعم (إضافة، تعديل، حذف، إصلاح الترتيب)
     Route::post('/support-downloads', [SupportDownloadController::class, 'store']);
     Route::put('/support-downloads/{id}', [SupportDownloadController::class, 'update']);
     Route::delete('/support-downloads/{id}', [SupportDownloadController::class, 'destroy']);
+    Route::post('/support-downloads/normalize', [SupportDownloadController::class, 'normalize']);
+
     Route::get('/admin/dashboard-stats', [DashboardController::class, 'index']);
 
     // مسارات إدارة أقسام الصفحة الرئيسية (Homepage Sections)

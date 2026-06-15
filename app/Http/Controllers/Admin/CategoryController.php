@@ -5,25 +5,30 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Http\Resources\CategoryResource;
+use App\Traits\ManagesSortOrder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CategoryController extends Controller
 {
+    use ManagesSortOrder;
+
     /**
-     * عرض جميع الأقسام (الرئيسية مع فروعها)
+     * عرض جميع الأقسام الرئيسية مع فروعها
      */
     public function index()
     {
-        // جلب الأقسام الرئيسية فقط، مع تحميل الأقسام الفرعية التابعة لها
         $categories = Category::whereNull('parent_id')
             ->orderBy('sort_order', 'asc')
-            ->with('children')
+            ->with(['children' => function ($q) {
+                $q->orderBy('sort_order', 'asc')->orderBy('id', 'asc');
+            }])
             ->get();
 
         return response()->json([
             'status' => true,
-            'data' => CategoryResource::collection($categories)
+            'data'   => CategoryResource::collection($categories),
         ], 200);
     }
 
@@ -33,39 +38,53 @@ class CategoryController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|array',
-            'name.ar' => 'required|string',
-            'name.en' => 'nullable|string',
-            'name.ku' => 'nullable|string',
+            'name'      => 'required|array',
+            'name.ar'   => 'required|string',
+            'name.en'   => 'nullable|string',
+            'name.ku'   => 'nullable|string',
             'parent_id' => 'nullable|exists:categories,id',
-            'image' => 'nullable|image|max:2048',
-            'sort_order' => 'nullable|integer',
+            'image'     => 'nullable|image|max:2048',
+            'sort_order'=> 'nullable|integer|min:1',
         ]);
 
-        $data = $request->only(['name', 'parent_id', 'is_active', 'sort_order']);
-        if (!empty($data['parent_id'])) {
-            $data['sort_order'] = 0;
-        } else {
-            $data['sort_order'] = $this->adjustSortOrder(null, $data['sort_order'] ?? null, Category::whereNull('parent_id'));
-        }
-
-        $slugName = $request->name['en'] ?? $request->name['ar'];
-        $data['slug'] = Str::slug($slugName);
-
+        $imagePath = null;
         if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('categories', 'public');
+            $imagePath = $request->file('image')->store('categories', 'public');
         }
 
-        $category = Category::create($data);
+        $category = DB::transaction(function () use ($request, $imagePath) {
+            $data = $request->only(['name', 'parent_id', 'is_active', 'sort_order']);
+
+            if (!empty($data['parent_id'])) {
+                // الأقسام الفرعية لا تملك ترتيباً مُدَاراً
+                $data['sort_order'] = 0;
+            } else {
+                $data['sort_order'] = $this->adjustSortOrder(
+                    null,
+                    isset($data['sort_order']) ? (int)$data['sort_order'] : null,
+                    Category::whereNull('parent_id')
+                );
+            }
+
+            $slugName    = $request->name['en'] ?? $request->name['ar'];
+            $data['slug'] = Str::slug($slugName);
+
+            if ($imagePath) {
+                $data['image'] = $imagePath;
+            }
+
+            return Category::create($data);
+        });
 
         return response()->json([
-            'status' => true,
-            'message' => 'تم إضافة القسم بنجاح', // تم التصحيح هنا
-            'data' => new CategoryResource($category)
+            'status'  => true,
+            'message' => 'تم إضافة القسم بنجاح',
+            'data'    => new CategoryResource($category),
         ], 201);
     }
+
     /**
-     * عرض قسم واحد بناءً على المعرف أو الـ Slug
+     * عرض قسم واحد
      */
     public function show($id)
     {
@@ -73,7 +92,7 @@ class CategoryController extends Controller
 
         return response()->json([
             'status' => true,
-            'data' => new CategoryResource($category)
+            'data'   => new CategoryResource($category),
         ], 200);
     }
 
@@ -82,111 +101,87 @@ class CategoryController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $category = Category::findOrFail($id);
-
         $request->validate([
-            'name' => 'required|array',
-            'name.ar' => 'required|string',
-            'name.en' => 'nullable|string',
-            'name.ku' => 'nullable|string',
+            'name'      => 'required|array',
+            'name.ar'   => 'required|string',
+            'name.en'   => 'nullable|string',
+            'name.ku'   => 'nullable|string',
             'parent_id' => 'nullable|exists:categories,id',
-            'image' => 'nullable|image|max:2048',
-            'sort_order' => 'nullable|integer',
+            'image'     => 'nullable|image|max:2048',
+            'sort_order'=> 'nullable|integer|min:1',
         ]);
 
-        $data = $request->only(['name', 'parent_id', 'is_active', 'sort_order']);
-        if (!empty($data['parent_id'])) {
-            $data['sort_order'] = 0;
-        } else {
-            $data['sort_order'] = $this->adjustSortOrder($category->id, $data['sort_order'] ?? null, Category::whereNull('parent_id'));
-        }
-
-        $slugName = $request->name['en'] ?? $request->name['ar'];
-        $data['slug'] = Str::slug($slugName);
-
+        $imagePath = null;
         if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('categories', 'public');
+            $imagePath = $request->file('image')->store('categories', 'public');
         }
 
-        // تم التصحيح هنا: استخدام update بدلاً من create
-        $category->update($data);
+        $category = DB::transaction(function () use ($request, $id, $imagePath) {
+            $category = Category::findOrFail($id);
+            $data     = $request->only(['name', 'parent_id', 'is_active', 'sort_order']);
 
-        return response()->json([
-            'status' => true,
-            'message' => 'تم تحديث القسم بنجاح', // تم التصحيح هنا
-            'data' => new CategoryResource($category)
-        ], 200); // تم التصحيح هنا إلى 200 بدلاً من 201
-    }
-
-    private function adjustSortOrder($modelId, $newOrder, $query)
-    {
-        if (empty($newOrder) || $newOrder <= 0) {
-            $max = (clone $query)->max('sort_order') ?? 0;
-            return $max + 1;
-        }
-
-        $oldOrder = null;
-        if ($modelId) {
-            $oldOrder = (clone $query)->where('id', $modelId)->value('sort_order');
-        }
-
-        if ($oldOrder !== null) {
-            $oldOrder = (int)$oldOrder;
-            $newOrder = (int)$newOrder;
-
-            if ($newOrder === $oldOrder) {
-                return $newOrder;
-            }
-
-            if ($newOrder < $oldOrder) {
-                // Moving up: Shift intermediate items down (increment)
-                (clone $query)
-                    ->where('id', '!=', $modelId)
-                    ->where('sort_order', '>=', $newOrder)
-                    ->where('sort_order', '<', $oldOrder)
-                    ->increment('sort_order');
+            if (!empty($data['parent_id'])) {
+                $data['sort_order'] = 0;
             } else {
-                // Moving down: Shift intermediate items up (decrement)
-                (clone $query)
-                    ->where('id', '!=', $modelId)
-                    ->where('sort_order', '>', $oldOrder)
-                    ->where('sort_order', '<=', $newOrder)
-                    ->decrement('sort_order');
+                $data['sort_order'] = $this->adjustSortOrder(
+                    $category->id,
+                    isset($data['sort_order']) ? (int)$data['sort_order'] : null,
+                    Category::whereNull('parent_id')
+                );
             }
-        } else {
-            // New item: Shift all items starting from newOrder up
-            $exists = (clone $query)->where('sort_order', $newOrder)->exists();
-            if ($exists) {
-                (clone $query)
-                    ->where('sort_order', '>=', $newOrder)
-                    ->increment('sort_order');
+
+            $slugName    = $request->name['en'] ?? $request->name['ar'];
+            $data['slug'] = Str::slug($slugName);
+
+            if ($imagePath) {
+                $data['image'] = $imagePath;
             }
-        }
 
-        return $newOrder;
-    }
-    /**
-     * حذف القسم مع إعادة ترتيب العناصر المتبقية
-     */
-    public function destroy($id)
-    {
-        $category = Category::findOrFail($id);
-        $deletedOrder = (int) $category->sort_order;
-        $parentId     = $category->parent_id;
-
-        // عند استخدام cascade في الـ migration سيتم حذف الأقسام الفرعية تلقائياً
-        $category->delete();
-
-        // إعادة ترتيب العناصر التي كانت بعد العنصر المحذوف (تسلسل بلا فراغات)
-        if ($parentId === null && $deletedOrder > 0) {
-            Category::whereNull('parent_id')
-                ->where('sort_order', '>', $deletedOrder)
-                ->decrement('sort_order');
-        }
+            $category->update($data);
+            return $category->fresh();
+        });
 
         return response()->json([
             'status'  => true,
-            'message' => 'تم حذف القسم بنجاح'
+            'message' => 'تم تحديث القسم بنجاح',
+            'data'    => new CategoryResource($category),
+        ], 200);
+    }
+
+    /**
+     * حذف القسم مع إعادة ترتيب المتبقين بلا فراغات
+     */
+    public function destroy($id)
+    {
+        DB::transaction(function () use ($id) {
+            $category     = Category::findOrFail($id);
+            $deletedOrder = (int) $category->sort_order;
+            $isParent     = is_null($category->parent_id);
+
+            $category->delete(); // cascade يحذف الأقسام الفرعية تلقائياً
+
+            // إعادة الترتيب للأقسام الرئيسية فقط
+            if ($isParent && $deletedOrder > 0) {
+                $this->reorderAfterDelete(Category::whereNull('parent_id'), $deletedOrder);
+            }
+        });
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'تم حذف القسم بنجاح',
+        ], 200);
+    }
+
+    /**
+     * إصلاح الترتيب الكامل للأقسام الرئيسية (يُعالج البيانات التالفة)
+     */
+    public function normalize()
+    {
+        $this->normalizeOrder(Category::whereNull('parent_id'));
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'تم إعادة ترتيب الأقسام بنجاح',
         ], 200);
     }
 }

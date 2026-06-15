@@ -5,144 +5,144 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\SupportDownload;
 use App\Http\Resources\SupportDownloadResource;
+use App\Traits\ManagesSortOrder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class SupportDownloadController extends Controller
 {
+    use ManagesSortOrder;
+
     public function index(Request $request)
     {
-        // 1. بدء الاستعلام
         $query = SupportDownload::query()->orderBy('sort_order', 'asc');
 
-        // 2. الفلترة (البحث في عنوان الملف بجميع اللغات)
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('title->ar', 'LIKE', "%{$search}%")
                   ->orWhere('title->en', 'LIKE', "%{$search}%")
                   ->orWhere('title->ku', 'LIKE', "%{$search}%");
             });
         }
 
-        // 3. جلب البيانات
         return SupportDownloadResource::collection($query->get());
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'title' => 'required|array',
-            'title.ar' => 'required|string',
-            'title.en' => 'nullable|string',
-            'title.ku' => 'nullable|string',
-            'file' => 'required|file|mimes:pdf,jpeg,png,jpg,webp,doc,docx,xls,xlsx,zip,rar|max:51200',
-            'sort_order' => 'nullable|integer',
+            'title'      => 'required|array',
+            'title.ar'   => 'required|string',
+            'title.en'   => 'nullable|string',
+            'title.ku'   => 'nullable|string',
+            'file'       => 'required|file|mimes:pdf,jpeg,png,jpg,webp,doc,docx,xls,xlsx,zip,rar|max:51200',
+            'sort_order' => 'nullable|integer|min:1',
         ]);
 
+        // رفع الملف خارج الـ transaction لتقليل وقت القفل
         $path = $request->file('file')->store('support_docs', 'public');
-        $sortOrder = $this->adjustSortOrder(null, $request->sort_order ?? null, SupportDownload::query());
 
-        $download = SupportDownload::create([
-            'title' => $request->title,
-            'pdf_file_path' => $path,
-            'sort_order' => $sortOrder,
-        ]);
+        $download = DB::transaction(function () use ($request, $path) {
+            $sortOrder = $this->adjustSortOrder(
+                null,
+                $request->filled('sort_order') ? (int)$request->sort_order : null,
+                SupportDownload::query()
+            );
 
-        return response()->json(['status' => true, 'message' => 'تم رفع الملف بنجاح', 'data' => new SupportDownloadResource($download)], 201);
+            return SupportDownload::create([
+                'title'         => $request->title,
+                'pdf_file_path' => $path,
+                'sort_order'    => $sortOrder,
+            ]);
+        });
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'تم رفع الملف بنجاح',
+            'data'    => new SupportDownloadResource($download),
+        ], 201);
     }
 
     public function update(Request $request, $id)
     {
-        $download = SupportDownload::findOrFail($id);
-
         $request->validate([
-            'title' => 'required|array',
-            'title.ar' => 'required|string',
-            'title.en' => 'nullable|string',
-            'title.ku' => 'nullable|string',
-            'file' => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp,doc,docx,xls,xlsx,zip,rar|max:51200',
-            'sort_order' => 'nullable|integer',
+            'title'      => 'required|array',
+            'title.ar'   => 'required|string',
+            'title.en'   => 'nullable|string',
+            'title.ku'   => 'nullable|string',
+            'file'       => 'nullable|file|mimes:pdf,jpeg,png,jpg,webp,doc,docx,xls,xlsx,zip,rar|max:51200',
+            'sort_order' => 'nullable|integer|min:1',
         ]);
 
-        $data = ['title' => $request->title];
-        $sortOrder = $this->adjustSortOrder($download->id, $request->sort_order ?? null, SupportDownload::query());
-        $data['sort_order'] = $sortOrder;
-
+        // رفع الملف الجديد خارج الـ transaction (إن وُجد)
+        $newFilePath = null;
         if ($request->hasFile('file')) {
-            // حذف الملف القديم من التخزين
-            Storage::disk('public')->delete($download->pdf_file_path);
-            // رفع الملف الجديد
-            $data['pdf_file_path'] = $request->file('file')->store('support_docs', 'public');
+            $newFilePath = $request->file('file')->store('support_docs', 'public');
         }
 
-        $download->update($data);
+        $download = DB::transaction(function () use ($request, $id, $newFilePath) {
+            $download  = SupportDownload::findOrFail($id);
+            $oldPath   = $download->pdf_file_path;
 
-        return response()->json(['status' => true, 'message' => 'تم تحديث الملف بنجاح', 'data' => new SupportDownloadResource($download)]);
-    }
+            $sortOrder = $this->adjustSortOrder(
+                $download->id,
+                $request->filled('sort_order') ? (int)$request->sort_order : null,
+                SupportDownload::query()
+            );
 
-    private function adjustSortOrder($modelId, $newOrder, $query)
-    {
-        if (empty($newOrder) || $newOrder <= 0) {
-            $max = (clone $query)->max('sort_order') ?? 0;
-            return $max + 1;
-        }
+            $data = [
+                'title'      => $request->title,
+                'sort_order' => $sortOrder,
+            ];
 
-        $oldOrder = null;
-        if ($modelId) {
-            $oldOrder = (clone $query)->where('id', $modelId)->value('sort_order');
-        }
-
-        if ($oldOrder !== null) {
-            $oldOrder = (int)$oldOrder;
-            $newOrder = (int)$newOrder;
-
-            if ($newOrder === $oldOrder) {
-                return $newOrder;
+            if ($newFilePath) {
+                $data['pdf_file_path'] = $newFilePath;
+                // حذف الملف القديم بعد التأكد من نجاح الحفظ
+                Storage::disk('public')->delete($oldPath);
             }
 
-            if ($newOrder < $oldOrder) {
-                // Moving up: Shift intermediate items down (increment)
-                (clone $query)
-                    ->where('id', '!=', $modelId)
-                    ->where('sort_order', '>=', $newOrder)
-                    ->where('sort_order', '<', $oldOrder)
-                    ->increment('sort_order');
-            } else {
-                // Moving down: Shift intermediate items up (decrement)
-                (clone $query)
-                    ->where('id', '!=', $modelId)
-                    ->where('sort_order', '>', $oldOrder)
-                    ->where('sort_order', '<=', $newOrder)
-                    ->decrement('sort_order');
-            }
-        } else {
-            // New item: Shift all items starting from newOrder up
-            $exists = (clone $query)->where('sort_order', $newOrder)->exists();
-            if ($exists) {
-                (clone $query)
-                    ->where('sort_order', '>=', $newOrder)
-                    ->increment('sort_order');
-            }
-        }
+            $download->update($data);
+            return $download->fresh();
+        });
 
-        return $newOrder;
+        return response()->json([
+            'status'  => true,
+            'message' => 'تم تحديث الملف بنجاح',
+            'data'    => new SupportDownloadResource($download),
+        ]);
     }
 
     public function destroy($id)
     {
-        $download = SupportDownload::findOrFail($id);
-        $deletedOrder = (int) $download->sort_order;
+        DB::transaction(function () use ($id) {
+            $download     = SupportDownload::findOrFail($id);
+            $deletedOrder = (int) $download->sort_order;
+            $filePath     = $download->pdf_file_path;
 
-        Storage::disk('public')->delete($download->pdf_file_path);
-        $download->delete();
+            $download->delete();
+            Storage::disk('public')->delete($filePath);
 
-        // إعادة ترتيب العناصر التي كانت بعد العنصر المحذوف (تسلسل بلا فراغات)
-        if ($deletedOrder > 0) {
-            SupportDownload::where('sort_order', '>', $deletedOrder)
-                ->decrement('sort_order');
-        }
+            $this->reorderAfterDelete(SupportDownload::query(), $deletedOrder);
+        });
 
-        return response()->json(['status' => true, 'message' => 'تم حذف الملف بنجاح']);
+        return response()->json([
+            'status'  => true,
+            'message' => 'تم حذف الملف بنجاح',
+        ]);
+    }
+
+    /**
+     * إصلاح الترتيب الكامل للملفات (يُعالج البيانات التالفة)
+     */
+    public function normalize()
+    {
+        $this->normalizeOrder(SupportDownload::query());
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'تم إعادة ترتيب الملفات بنجاح',
+        ]);
     }
 }

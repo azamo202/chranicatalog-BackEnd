@@ -5,131 +5,126 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\SupportVideo;
 use App\Http\Resources\SupportVideoResource;
-use Illuminate\Http\Request;
+use App\Traits\ManagesSortOrder;
 use App\Services\YoutubeService;
 use App\Rules\ValidYoutube;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class SupportVideoController extends Controller
 {
+    use ManagesSortOrder;
+
     public function index(Request $request)
     {
-        // 1. بدء الاستعلام
         $query = SupportVideo::query()->orderBy('sort_order', 'asc');
 
-        // 2. الفلترة (البحث في عنوان الفيديو بجميع اللغات)
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('title->ar', 'LIKE', "%{$search}%")
                   ->orWhere('title->en', 'LIKE', "%{$search}%")
                   ->orWhere('title->ku', 'LIKE', "%{$search}%");
             });
         }
 
-        // 3. جلب البيانات
         return SupportVideoResource::collection($query->get());
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'title' => 'required|array',
-            'title.ar' => 'required|string',
-            'title.en' => 'nullable|string',
-            'title.ku' => 'nullable|string',
+            'title'       => 'required|array',
+            'title.ar'    => 'required|string',
+            'title.en'    => 'nullable|string',
+            'title.ku'    => 'nullable|string',
             'youtube_url' => ['required', 'string', new ValidYoutube],
-            'sort_order' => 'nullable|integer',
+            'sort_order'  => 'nullable|integer|min:1',
         ]);
 
-        $data = $request->all();
-        $data['youtube_id'] = YoutubeService::extractId($request->youtube_url);
-        unset($data['youtube_url']);
-        $data['sort_order'] = $this->adjustSortOrder(null, $data['sort_order'] ?? null, SupportVideo::query());
+        $video = DB::transaction(function () use ($request) {
+            $sortOrder = $this->adjustSortOrder(
+                null,
+                $request->filled('sort_order') ? (int)$request->sort_order : null,
+                SupportVideo::query()
+            );
 
-        $video = SupportVideo::create($data);
-        return response()->json(['status' => true, 'message' => 'تم إضافة الفيديو بنجاح', 'data' => new SupportVideoResource($video)], 201);
+            return SupportVideo::create([
+                'title'      => $request->title,
+                'youtube_id' => YoutubeService::extractId($request->youtube_url),
+                'sort_order' => $sortOrder,
+            ]);
+        });
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'تم إضافة الفيديو بنجاح',
+            'data'    => new SupportVideoResource($video),
+        ], 201);
     }
 
     public function update(Request $request, $id)
     {
-        $video = SupportVideo::findOrFail($id);
         $request->validate([
-            'title' => 'required|array',
-            'title.ar' => 'required|string',
+            'title'       => 'required|array',
+            'title.ar'    => 'required|string',
+            'title.en'    => 'nullable|string',
+            'title.ku'    => 'nullable|string',
             'youtube_url' => ['required', 'string', new ValidYoutube],
-            'sort_order' => 'nullable|integer',
+            'sort_order'  => 'nullable|integer|min:1',
         ]);
 
-        $data = $request->all();
-        $data['youtube_id'] = YoutubeService::extractId($request->youtube_url);
-        unset($data['youtube_url']);
-        $data['sort_order'] = $this->adjustSortOrder($video->id, $data['sort_order'] ?? null, SupportVideo::query());
+        $video = DB::transaction(function () use ($request, $id) {
+            $video     = SupportVideo::findOrFail($id);
+            $sortOrder = $this->adjustSortOrder(
+                $video->id,
+                $request->filled('sort_order') ? (int)$request->sort_order : null,
+                SupportVideo::query()
+            );
 
-        $video->update($data);
-        return response()->json(['status' => true, 'message' => 'تم تحديث الفيديو بنجاح', 'data' => new SupportVideoResource($video)]);
-    }
+            $video->update([
+                'title'      => $request->title,
+                'youtube_id' => YoutubeService::extractId($request->youtube_url),
+                'sort_order' => $sortOrder,
+            ]);
 
-    private function adjustSortOrder($modelId, $newOrder, $query)
-    {
-        if (empty($newOrder) || $newOrder <= 0) {
-            $max = (clone $query)->max('sort_order') ?? 0;
-            return $max + 1;
-        }
+            return $video->fresh();
+        });
 
-        $oldOrder = null;
-        if ($modelId) {
-            $oldOrder = (clone $query)->where('id', $modelId)->value('sort_order');
-        }
-
-        if ($oldOrder !== null) {
-            $oldOrder = (int)$oldOrder;
-            $newOrder = (int)$newOrder;
-
-            if ($newOrder === $oldOrder) {
-                return $newOrder;
-            }
-
-            if ($newOrder < $oldOrder) {
-                // Moving up: Shift intermediate items down (increment)
-                (clone $query)
-                    ->where('id', '!=', $modelId)
-                    ->where('sort_order', '>=', $newOrder)
-                    ->where('sort_order', '<', $oldOrder)
-                    ->increment('sort_order');
-            } else {
-                // Moving down: Shift intermediate items up (decrement)
-                (clone $query)
-                    ->where('id', '!=', $modelId)
-                    ->where('sort_order', '>', $oldOrder)
-                    ->where('sort_order', '<=', $newOrder)
-                    ->decrement('sort_order');
-            }
-        } else {
-            // New item: Shift all items starting from newOrder up
-            $exists = (clone $query)->where('sort_order', $newOrder)->exists();
-            if ($exists) {
-                (clone $query)
-                    ->where('sort_order', '>=', $newOrder)
-                    ->increment('sort_order');
-            }
-        }
-
-        return $newOrder;
+        return response()->json([
+            'status'  => true,
+            'message' => 'تم تحديث الفيديو بنجاح',
+            'data'    => new SupportVideoResource($video),
+        ]);
     }
 
     public function destroy($id)
     {
-        $video = SupportVideo::findOrFail($id);
-        $deletedOrder = (int) $video->sort_order;
+        DB::transaction(function () use ($id) {
+            $video        = SupportVideo::findOrFail($id);
+            $deletedOrder = (int) $video->sort_order;
 
-        $video->delete();
+            $video->delete();
 
-        // إعادة ترتيب العناصر التي كانت بعد العنصر المحذوف (تسلسل بلا فراغات)
-        if ($deletedOrder > 0) {
-            SupportVideo::where('sort_order', '>', $deletedOrder)
-                ->decrement('sort_order');
-        }
+            $this->reorderAfterDelete(SupportVideo::query(), $deletedOrder);
+        });
 
-        return response()->json(['status' => true, 'message' => 'تم حذف الفيديو بنجاح']);
+        return response()->json([
+            'status'  => true,
+            'message' => 'تم حذف الفيديو بنجاح',
+        ]);
+    }
+
+    /**
+     * إصلاح الترتيب الكامل للفيديوهات (يُعالج البيانات التالفة)
+     */
+    public function normalize()
+    {
+        $this->normalizeOrder(SupportVideo::query());
+
+        return response()->json([
+            'status'  => true,
+            'message' => 'تم إعادة ترتيب الفيديوهات بنجاح',
+        ]);
     }
 }
