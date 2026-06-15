@@ -35,17 +35,9 @@ class ProductController extends Controller
         }
         
         if ($request->filled('category_id')) {
-            $categoryId = $request->category_id;
-            
-            // جلب معرف القسم الحالي مع جميع معرفات الأقسام الفرعية التابعة له
-            $categoryIds = \App\Models\Category::where('id', $categoryId)
-                ->get()
-                ->flatMap(function($category) {
-                    return [$category->id, ...$category->children()->pluck('id')->toArray()];
-                })
-                ->unique();
-                
-            $query->whereIn('category_id', $categoryIds);
+            // نجلب المنتجات الخاصة بهذا القسم تحديداً، دون جلب منتجات الأقسام الفرعية
+            // لضمان عدم تداخل قيم الترتيب (sort_order) في واجهة لوحة التحكم
+            $query->where('category_id', $request->category_id);
         }
 
         // 3. الفلترة حسب الماركة (Brand)
