@@ -40,22 +40,24 @@ class ProductResource extends JsonResource
                 });
             }),
 
-            // جلب المواصفات الفنية وتجميعها بناءً على (group_name)
+            // جلب المواصفات الفنية وتجميعها بناءً على (group_name) كـ JSON للحفاظ على الترجمات
             'specifications' => $this->whenLoaded('specifications', function () {
-                return $this->specifications->groupBy('group_name')->map(function ($specs) {
+                return $this->specifications->groupBy(function ($spec) {
+                    return $spec->getRawOriginal('group_name');
+                })->map(function ($specs) {
                     return $specs->map(function ($spec) {
                         return [
-                            'key' => $spec->spec_key,
-                            'value' => $spec->spec_value,
+                            'key' => $spec->getTranslations('spec_key'),
+                            'value' => $spec->getTranslations('spec_value'),
                         ];
                     });
                 });
             }),
 
-            // جلب المميزات مرتبة
+            // جلب المميزات مرتبة مع كافة الترجمات
             'features' => $this->whenLoaded('features', function () {
                 return $this->features->sortBy('sort_order')->values()->map(function ($feat) {
-                    return $feat->feature_text;
+                    return $feat->getTranslations('feature_text');
                 });
             }),
 
