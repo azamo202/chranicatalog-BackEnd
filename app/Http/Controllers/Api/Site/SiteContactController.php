@@ -34,11 +34,10 @@ class SiteContactController extends Controller
                 'message' => 'تم إرسال رسالتك بنجاح. سنقوم بالرد عليك قريباً.'
             ]);
         } catch (\Exception $e) {
-            // في حال فشل الإرسال (مثلاً عدم إعداد SMTP)
-            return response()->json([
-                'status' => false,
-                'message' => 'عذراً، حدث خطأ أثناء إرسال الرسالة. يرجى المحاولة لاحقاً.'
-            ], 500);
-        }
+    return response()->json([
+        'status' => false,
+        'error' => $e->getMessage()
+    ], 500);
+}
     }
 }
