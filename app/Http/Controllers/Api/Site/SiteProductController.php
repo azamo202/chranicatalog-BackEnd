@@ -61,8 +61,15 @@ class SiteProductController extends Controller
         // نربط جدول الأقسام لكي نرتب بناءً على ترتيب القسم الأب أولاً ثم القسم الفرعي ثم ترتيب المنتج
         $query->leftJoin('categories as c', 'products.category_id', '=', 'c.id')
               ->leftJoin('categories as parent_c', 'c.parent_id', '=', 'parent_c.id')
-              ->orderByRaw('COALESCE(parent_c.sort_order, c.sort_order) asc')
-              ->orderByRaw('CASE WHEN c.parent_id IS NOT NULL THEN c.sort_order ELSE 0 END asc')
+              // 1. ترتيب القسم الرئيسي (سواء كان الأب أو القسم نفسه)
+              ->orderByRaw('COALESCE(parent_c.sort_order, c.sort_order, 9999) asc')
+              // 2. تجميع المنتجات بناءً على معرف القسم الرئيسي لمنع تداخل الأقسام التي لها نفس الترتيب
+              ->orderByRaw('COALESCE(parent_c.id, c.id) asc')
+              // 3. ترتيب الأقسام الفرعية، المنتجات التابعة للقسم الرئيسي تظهر أولاً (-1) ثم الأقسام الفرعية
+              ->orderByRaw('CASE WHEN c.parent_id IS NOT NULL THEN COALESCE(c.sort_order, 9999) ELSE -1 END asc')
+              // 4. تجميع المنتجات بناءً على معرف القسم الفرعي لمنع تداخل المنتجات
+              ->orderBy('c.id', 'asc')
+              // 5. أخيراً ترتيب المنتجات داخل كل قسم
               ->orderBy('products.sort_order', 'asc')
               ->latest('products.created_at');
 
