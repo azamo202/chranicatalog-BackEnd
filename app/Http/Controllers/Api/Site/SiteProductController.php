@@ -58,9 +58,11 @@ class SiteProductController extends Controller
         }
 
         // 6. الترتيب
-        // نربط جدول الأقسام لكي نرتب بناءً على ترتيب القسم أولاً ثم ترتيب المنتج
-        $query->leftJoin('categories', 'products.category_id', '=', 'categories.id')
-              ->orderBy('categories.sort_order', 'asc')
+        // نربط جدول الأقسام لكي نرتب بناءً على ترتيب القسم الأب أولاً ثم القسم الفرعي ثم ترتيب المنتج
+        $query->leftJoin('categories as c', 'products.category_id', '=', 'c.id')
+              ->leftJoin('categories as parent_c', 'c.parent_id', '=', 'parent_c.id')
+              ->orderByRaw('COALESCE(parent_c.sort_order, c.sort_order) asc')
+              ->orderByRaw('CASE WHEN c.parent_id IS NOT NULL THEN c.sort_order ELSE 0 END asc')
               ->orderBy('products.sort_order', 'asc')
               ->latest('products.created_at');
 
