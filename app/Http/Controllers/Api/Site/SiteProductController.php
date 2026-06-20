@@ -15,7 +15,8 @@ class SiteProductController extends Controller
     public function index(Request $request)
     {
         // 1. الاستعلام الأساسي: جلب المنتجات الفعالة فقط مع صورتها الرئيسية والقسم والماركة
-        $query = Product::where('is_active', true)
+        $query = Product::select('products.*')
+            ->where('products.is_active', true)
             ->with(['category', 'brand', 'images' => function ($q) {
                 $q->where('is_primary', true); 
             }]);
@@ -34,30 +35,34 @@ class SiteProductController extends Controller
                 })
                 ->unique();
 
-            $query->whereIn('category_id', $categoryIds);
+            $query->whereIn('products.category_id', $categoryIds);
         }
 
         // 3. الفلترة حسب الماركة
         if ($request->filled('brand_id')) {
-            $query->where('brand_id', $request->brand_id);
+            $query->where('products.brand_id', $request->brand_id);
         }
 
         // 5. البحث النصي الذكي (يبحث في اللغات الثلاث وفي رقم الموديل)
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('name->ar', 'LIKE', "%{$search}%")
-                  ->orWhere('name->en', 'LIKE', "%{$search}%")
-                  ->orWhere('name->ku', 'LIKE', "%{$search}%")
-                  ->orWhere('origin_country->ar', 'LIKE', "%{$search}%")
-                  ->orWhere('origin_country->en', 'LIKE', "%{$search}%")
-                  ->orWhere('origin_country->ku', 'LIKE', "%{$search}%")
-                  ->orWhere('model_number', 'LIKE', "%{$search}%");
+                $q->where('products.name->ar', 'LIKE', "%{$search}%")
+                  ->orWhere('products.name->en', 'LIKE', "%{$search}%")
+                  ->orWhere('products.name->ku', 'LIKE', "%{$search}%")
+                  ->orWhere('products.origin_country->ar', 'LIKE', "%{$search}%")
+                  ->orWhere('products.origin_country->en', 'LIKE', "%{$search}%")
+                  ->orWhere('products.origin_country->ku', 'LIKE', "%{$search}%")
+                  ->orWhere('products.model_number', 'LIKE', "%{$search}%");
             });
         }
 
         // 6. الترتيب
-        $query->orderBy('sort_order', 'asc')->latest();
+        // نربط جدول الأقسام لكي نرتب بناءً على ترتيب القسم أولاً ثم ترتيب المنتج
+        $query->leftJoin('categories', 'products.category_id', '=', 'categories.id')
+              ->orderBy('categories.sort_order', 'asc')
+              ->orderBy('products.sort_order', 'asc')
+              ->latest('products.created_at');
 
         // 7. التقسيم (Pagination)
         $products = $query->paginate(12);
