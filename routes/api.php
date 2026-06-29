@@ -105,6 +105,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/products/{id}', [ProductController::class, 'update']);
     Route::delete('/products/{id}', [ProductController::class, 'destroy']);
 
+    // تكرار (نسخ) منتج
+    Route::post('/products/{id}/duplicate', [ProductController::class, 'duplicate']);
+
     // إدارة صور المنتجات
     Route::post('/products/images/{id}/set-primary', [ProductController::class, 'setPrimaryImage']);
     Route::delete('/products/images/{id}', [ProductController::class, 'deleteImage']);

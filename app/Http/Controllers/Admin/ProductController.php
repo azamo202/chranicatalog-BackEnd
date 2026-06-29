@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Http\Resources\ProductResource;
+use App\Services\ProductDuplicationService;
 use App\Traits\ManagesSortOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -492,4 +493,38 @@ class ProductController extends Controller
             return response()->json(['status' => false, 'message' => $e->getMessage()], 500);
         }
     }
+
+    /**
+     * تكرار منتج موجود وإنشاء نسخة منه مع جميع بياناته وعلاقاته.
+     *
+     * POST /products/{id}/duplicate
+     *
+     * يقوم بـ:
+     *  - التحقق من وجود المنتج
+     *  - تفويض منطق التكرار لـ ProductDuplicationService
+     *  - إعادة المنتج الجديد مع رسالة نجاح
+     */
+    public function duplicate(Request $request, $id, ProductDuplicationService $duplicationService)
+    {
+        $original = Product::findOrFail($id);
+
+        try {
+            $newProduct = $duplicationService->duplicate($original);
+
+            return response()->json([
+                'status'  => true,
+                'message' => 'تم نسخ المنتج بنجاح',
+                'data'    => [
+                    'id'      => $newProduct->id,
+                    'product' => $newProduct,
+                ],
+            ], 201);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'فشل نسخ المنتج. يرجى المحاولة مرة أخرى.',
+            ], 500);
+        }
+    }
 }
+
