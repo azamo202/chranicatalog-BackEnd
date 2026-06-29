@@ -94,18 +94,21 @@ class ProductDuplicationService
             }
 
             // 7. تكرار المواصفات الفنية (مع الحفاظ على جميع الترجمات)
+            // نستخدم getTranslations() لأنها تُعيد array — وهو ما يتوقعه Spatie عند create().
+            // getRawOriginal() تُعيد JSON string خام فيتم تشفيره مرتين (double encoding).
             foreach ($original->specifications as $spec) {
                 $newProduct->specifications()->create([
-                    'group_name' => $spec->getRawOriginal('group_name'),
-                    'spec_key'   => $spec->getRawOriginal('spec_key'),
-                    'spec_value' => $spec->getRawOriginal('spec_value'),
+                    'group_name' => $spec->getTranslations('group_name'),
+                    'spec_key'   => $spec->getTranslations('spec_key'),
+                    'spec_value' => $spec->getTranslations('spec_value'),
                 ]);
             }
 
             // 8. تكرار المميزات (مع الحفاظ على جميع الترجمات)
+            // نفس السبب: getTranslations() تُعيد array صحيح بدلاً من JSON string.
             foreach ($original->features as $feature) {
                 $newProduct->features()->create([
-                    'feature_text' => $feature->getRawOriginal('feature_text'),
+                    'feature_text' => $feature->getTranslations('feature_text'),
                     'sort_order'   => $feature->sort_order,
                 ]);
             }
