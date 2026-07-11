@@ -44,7 +44,7 @@ class CategoryController extends Controller
             'name.ku'   => 'nullable|string',
             'parent_id' => 'nullable|exists:categories,id',
             'image'     => 'nullable|image|max:2048',
-            'sort_order'=> 'nullable|integer|min:1',
+            'sort_order'=> 'nullable|integer|min:0',
         ]);
 
         $imagePath = null;
@@ -108,7 +108,7 @@ class CategoryController extends Controller
             'name.ku'   => 'nullable|string',
             'parent_id' => 'nullable|exists:categories,id',
             'image'     => 'nullable|image|max:2048',
-            'sort_order'=> 'nullable|integer|min:1',
+            'sort_order'=> 'nullable|integer|min:0',
         ]);
 
         $imagePath = null;
